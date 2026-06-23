@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TextDatabase xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="texts.xsd" Version="4.26.1">
+  <Languages>
+    <Language Id="GB" />
+  </Languages>
+  <Texts>
+    <TextGroup Id="Group2" />
+    <TextGroup Id="Group1">
+      <Text Id="ResourceId1" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">New Text</Translation>
+      </Text>
+    </TextGroup>
+    <TextGroup Id="Unsorted">
+      <Text Id="radarStatus" Alignment="Left" TypographyId="Default">
+        <Translation Language="GB">SCAN</Translation>
+      </Text>
+      <Text Id="currentDistance" Alignment="Left" TypographyId="Default">
+        <Translation Language="GB">042 cm</Translation>
+      </Text>
+      <Text Id="currentAngle" Alignment="Left" TypographyId="Default">
+        <Translation Language="GB">065 deg</Translation>
+      </Text>
+      <Text Id="lastAngle" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">65</Translation>
+      </Text>
+      <Text Id="ResourceId3" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">New Text</Translation>
+      </Text>
+      <Text Id="txtLastAngleValue" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">65</Translation>
+      </Text>
+      <Text Id="objectCount" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">000</Translation>
+      </Text>
+      <Text Id="range" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">150 cm</Translation>
+      </Text>
+      <Text Id="speedMode" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">MED</Translation>
+      </Text>
+      <Text Id="scanMode" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">180 deg</Translation>
+      </Text>
+      <Text Id="__SingleUse_Z67U" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">Range: &lt;range&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_DXG0" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">Thầy Tiến 10 điểm</Translation>
+      </Text>
+      <Text Id="__SingleUse_UOX4" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">Objects: &lt;objectCount&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_VQFR" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">Speed: &lt;speedMode&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_K48K" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">Last angle: &lt;lastAngle&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_HYEC" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">Scan: &lt;scanMode&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_9PS9" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">SYSTEM INFO</Translation>
+      </Text>
+      <Text Id="__SingleUse_QO2I" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">SPEED: &lt;value&gt; | MODE: &lt;value&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_3RNH" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">90 độ</Translation>
+      </Text>
+      <Text Id="__SingleUse_Q8MC" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">180 độ</Translation>
+      </Text>
+      <Text Id="__SingleUse_4FU8" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">SLOW</Translation>
+      </Text>
+      <Text Id="__SingleUse_BJ5Q" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">FAST</Translation>
+      </Text>
+      <Text Id="__SingleUse_OR8Z" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">MED</Translation>
+      </Text>
+      <Text Id="__SingleUse_IT6Y" Alignment="Center" TypographyId="Default">
+        <Translation Language="GB">SETTINGS</Translation>
+      </Text>
+      <Text Id="__SingleUse_RKED" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB"></Translation>
+      </Text>
+      <Text Id="__SingleUse_54LM" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB"></Translation>
+      </Text>
+      <Text Id="__SingleUse_3XPP" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">&lt;radarStatus&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_69AA" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">&lt;currentDistance&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_GT9N" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">&lt;currentAngle&gt;</Translation>
+      </Text>
+      <Text Id="__SingleUse_VLQL" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">Info</Translation>
+      </Text>
+      <Text Id="__SingleUse_XFLS" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">Set</Translation>
+      </Text>
+      <Text Id="__SingleUse_7TM8" Alignment="Center" TypographyId="Small">
+        <Translation Language="GB">Start</Translation>
+      </Text>
+      <Text Id="__SingleUse_VQA2" Alignment="Left" TypographyId="Default">
+        <Translation Language="GB">STM32F429I-DISC1</Translation>
+      </Text>
+      <Text Id="__SingleUse_ZF7J" Alignment="Left" TypographyId="Default">
+        <Translation Language="GB">RADAR TẦM NGẮN</Translation>
+      </Text>
+      <Text Id="ResourceId2" Alignment="Left" TypographyId="Small">
+        <Translation Language="GB">New Text</Translation>
+      </Text>
+    </TextGroup>
+  </Texts>
+  <Typographies>
+    <Typography Id="Default" Font="verdana.ttf" Size="20" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
+    <Typography Id="Large" Font="verdana.ttf" Size="40" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
+    <Typography Id="Small" Font="verdana.ttf" Size="12" Bpp="4" IsVector="no" Direction="LTR" FallbackCharacter="?" />
+  </Typographies>
+</TextDatabase>
