@@ -486,8 +486,34 @@ void RadarApp_TaskLoop(void)
      * Sau thêm oled_status.c thì biến này sẽ đổi theo trạng thái thật.
      */
     data.oled_connected = 0;
-
     RadarUiBridge_SetData(&data);
+
+    /*
+     * DEBUG khi radar đang chạy.
+     * Đặt ở nhánh enabled để Hercules vẫn in sau khi vào ScreenScan.
+     */
+    static uint32_t debug_enabled_last_tick = 0;
+    uint32_t debug_enabled_now = HAL_GetTick();
+
+    if ((debug_enabled_now - debug_enabled_last_tick) >= 500U)
+    {
+        debug_enabled_last_tick = debug_enabled_now;
+
+        RadarDebug_Printf("RUN en=%u angle=%u valid=%u dist=%u echo=%luus\r\n",
+                          data.radar_enabled,
+                          data.angle_deg,
+                          data.distance_valid,
+                          data.distance_cm,
+                          HCSR04_GetEchoUs());
+
+        RadarDebug_Printf("    detect=%u near=%u status=%u obj=%u lastDist=%u lastAng=%u\r\n",
+                          data.object_detected,
+                          data.near_warning,
+                          data.radar_status,
+                          data.object_count,
+                          data.last_object_distance_cm,
+                          data.last_object_angle_deg);
+    }
 
     /*
      * 9. Tính góc tiếp theo.
