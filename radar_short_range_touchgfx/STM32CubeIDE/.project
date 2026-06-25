@@ -545,6 +545,11 @@
 			<locationURI>PARENT-1-PROJECT_LOC/TouchGFX/generated/images/src/image_btn_radar_65x36_pressed.cpp</locationURI>
 		</link>
 		<link>
+			<name>Application/User/generated/image_greensweep_90deg_200x140.cpp</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/TouchGFX/generated/images/src/image_greensweep_90deg_200x140.cpp</locationURI>
+		</link>
+		<link>
 			<name>Application/User/generated/image_icon_back_to_scan_48x48.cpp</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/TouchGFX/generated/images/src/image_icon_back_to_scan_48x48.cpp</locationURI>
@@ -655,9 +660,19 @@
 			<locationURI>PARENT-1-PROJECT_LOC/TouchGFX/generated/images/src/image_sweep_glow_green.cpp</locationURI>
 		</link>
 		<link>
+			<name>Application/User/generated/image_sweep_glow_green_90deg_narrow_200x140.cpp</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/TouchGFX/generated/images/src/image_sweep_glow_green_90deg_narrow_200x140.cpp</locationURI>
+		</link>
+		<link>
 			<name>Application/User/generated/image_sweep_glow_red.cpp</name>
 			<type>1</type>
 			<locationURI>PARENT-1-PROJECT_LOC/TouchGFX/generated/images/src/image_sweep_glow_red.cpp</locationURI>
+		</link>
+		<link>
+			<name>Application/User/generated/image_sweep_glow_red_90deg_narrow_200x140.cpp</name>
+			<type>1</type>
+			<locationURI>PARENT-1-PROJECT_LOC/TouchGFX/generated/images/src/image_sweep_glow_red_90deg_narrow_200x140.cpp</locationURI>
 		</link>
 		<link>
 			<name>Application/User/generated/image_target_dot.cpp</name>
