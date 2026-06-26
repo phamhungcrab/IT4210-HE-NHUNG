@@ -5,6 +5,7 @@
 #include "task.h"
 
 #include "radar_config.h"
+#include "radar_types.h"
 #include "radar_ui_bridge.h"
 #include "servo_mg90s.h"
 #include "hcsr04.h"
@@ -14,19 +15,50 @@
 /*
  * radar_app.c
  *
- * Logic radar chính:
- * - Servo hiện tại là loại 360 continuous rotation.
- * - Không thể set góc tuyệt đối 0/90/180 như servo thường.
- * - g_angle chỉ là góc ảo để hiển thị UI/radar.
- * - Servo quay một đoạn ngắn theo hướng quét, sau đó dừng để đo HC-SR04.
+ * Servo 360 continuous:
+ * - Không có góc tuyệt đối 0/90/180.
+ * - g_angle chỉ là góc ảo để UI hiển thị.
+ * - Servo quay theo hướng UI trong một khoảng thời gian.
+ * - Sau đó dừng, update góc ảo, đo SR04.
  *
- * HC-SR04:
- * - TRIG = PG2
- * - ECHO = PG3 EXTI
- *
- * Servo:
- * - Signal = PB4 software PWM trong servo_mg90s.c
+ * Cần tự căn:
+ * - SERVO_360_*_MOVE_MS: thời gian servo quay mỗi bước.
+ * - SERVO_360_DIRECTION_SIGN: nếu servo quay ngược UI thì đổi -1.
  */
+
+/* ===== Calib servo 360 ở đây ===== */
+
+/*
+ * Nếu servo quay ngược chiều UI:
+ * đổi 1 thành -1.
+ */
+#ifndef SERVO_360_DIRECTION_SIGN
+#define SERVO_360_DIRECTION_SIGN        1
+#endif
+
+/*
+ * Thời gian quay cho mỗi bước góc ảo.
+ * Nếu radar_config.h đã có thì dùng bên radar_config.h.
+ */
+#ifndef SERVO_360_SLOW_MOVE_MS
+#define SERVO_360_SLOW_MOVE_MS          120U
+#endif
+
+#ifndef SERVO_360_MED_MOVE_MS
+#define SERVO_360_MED_MOVE_MS           90U
+#endif
+
+#ifndef SERVO_360_FAST_MOVE_MS
+#define SERVO_360_FAST_MOVE_MS          65U
+#endif
+
+#ifndef SERVO_360_SETTLE_MS
+#define SERVO_360_SETTLE_MS             80U
+#endif
+
+#ifndef RADAR_LOOP_IDLE_MS
+#define RADAR_LOOP_IDLE_MS              20U
+#endif
 
 static int16_t g_angle = SERVO_CENTER_ANGLE_DEG;
 static int8_t  g_direction = 1;
@@ -72,20 +104,29 @@ static uint16_t RadarApp_GetStep(uint8_t speed_mode)
     }
 }
 
-static uint32_t RadarApp_GetDelayMs(uint8_t speed_mode)
+static uint32_t RadarApp_GetServoMoveMs(uint8_t speed_mode)
 {
     switch (speed_mode)
     {
     case RADAR_SPEED_SLOW:
-        return RADAR_SPEED_SLOW_DELAY_MS;
+        return SERVO_360_SLOW_MOVE_MS;
 
     case RADAR_SPEED_FAST:
-        return RADAR_SPEED_FAST_DELAY_MS;
+        return SERVO_360_FAST_MOVE_MS;
 
     case RADAR_SPEED_MED:
     default:
-        return RADAR_SPEED_MED_DELAY_MS;
+        return SERVO_360_MED_MOVE_MS;
     }
+}
+
+static int8_t RadarApp_GetPhysicalServoDirection(int8_t ui_direction)
+{
+#if (SERVO_360_DIRECTION_SIGN < 0)
+    return (int8_t)(-ui_direction);
+#else
+    return ui_direction;
+#endif
 }
 
 static void RadarApp_ClampAngleToCurrentScanMode(uint8_t scan_mode_deg)
@@ -179,10 +220,6 @@ static uint8_t RadarApp_MeasureDistance(uint16_t *distance_cm)
             return 0;
         }
 
-        /*
-         * Không busy-wait cứng.
-         * Nhường CPU cho TouchGFX/task khác.
-         */
         vTaskDelay(pdMS_TO_TICKS(1));
     }
 }
@@ -256,6 +293,7 @@ void RadarApp_Stop(void)
 
     g_angle = SERVO_CENTER_ANGLE_DEG;
     g_direction = 1;
+    g_prev_detected = 0;
 
     RadarApp_SetSafeOutput();
 }
@@ -315,6 +353,9 @@ void RadarApp_TaskLoop(void)
     uint8_t detected = 0;
     uint8_t near_warning = 0;
 
+    int8_t physical_direction;
+    uint32_t move_ms;
+
     /*
      * Lấy data hiện tại từ bridge để giữ object_count,
      * last_object_distance_cm, last_object_angle_deg...
@@ -369,38 +410,43 @@ void RadarApp_TaskLoop(void)
     /*
      * Đang scan:
      * g_angle là góc ảo cho UI.
-     * Servo 360 không tới góc tuyệt đối, chỉ quay theo hướng.
+     * Servo 360 chỉ quay theo hướng trong một khoảng thời gian.
      */
     RadarApp_ClampAngleToCurrentScanMode(scan_mode);
 
     /*
-     * 1. Quay servo một đoạn theo hướng quét.
+     * 1. Cho servo quay theo hướng UI.
+     * Nếu servo quay ngược UI, đổi SERVO_360_DIRECTION_SIGN ở đầu file.
      */
-    Servo_SetContinuous(g_direction, speed_mode);
+    physical_direction = RadarApp_GetPhysicalServoDirection(g_direction);
+    move_ms = RadarApp_GetServoMoveMs(speed_mode);
+
+    Servo_SetContinuous(physical_direction, speed_mode);
+    vTaskDelay(pdMS_TO_TICKS(move_ms));
 
     /*
-     * Thời gian quay phụ thuộc speed.
-     * SLOW quay lâu hơn nhưng delta pulse nhỏ hơn trong servo_mg90s.c.
-     */
-    vTaskDelay(pdMS_TO_TICKS(RadarApp_GetDelayMs(speed_mode)));
-
-    /*
-     * 2. Dừng servo để đo SR04, tránh đo lúc cảm biến đang rung/quay.
+     * 2. Dừng servo.
      */
     Servo_Stop();
 
     /*
-     * Chờ cơ khí ổn định một chút.
+     * 3. Cập nhật góc ảo sau khi servo đã quay.
+     * UI sẽ chạy cùng hướng g_direction.
      */
-    vTaskDelay(pdMS_TO_TICKS(30));
+    RadarApp_AdvanceAngle(scan_mode, speed_mode);
 
     /*
-     * 3. Đo khoảng cách.
+     * 4. Chờ cơ khí ổn định rồi đo SR04.
+     */
+    vTaskDelay(pdMS_TO_TICKS(SERVO_360_SETTLE_MS));
+
+    /*
+     * 5. Đo khoảng cách.
      */
     distance_valid = RadarApp_MeasureDistance(&distance_cm);
 
     /*
-     * 4. Xác định phát hiện vật / cảnh báo gần.
+     * 6. Xác định phát hiện vật / cảnh báo gần.
      */
     if (distance_valid &&
         distance_cm >= RADAR_MIN_DISTANCE_CM &&
@@ -415,7 +461,7 @@ void RadarApp_TaskLoop(void)
     }
 
     /*
-     * 5. Đếm object: chỉ tăng khi chuyển từ không có vật -> có vật.
+     * 7. Đếm object: chỉ tăng khi chuyển từ không có vật -> có vật.
      */
     if (detected && !g_prev_detected)
     {
@@ -434,9 +480,7 @@ void RadarApp_TaskLoop(void)
     g_prev_detected = detected;
 
     /*
-     * 6. LED / buzzer.
-     * PG13 = scan heartbeat.
-     * PG14 = alert/detect.
+     * 8. LED / buzzer.
      */
     g_scan_led_state = !g_scan_led_state;
     LedScan_Set(g_scan_led_state);
@@ -444,7 +488,7 @@ void RadarApp_TaskLoop(void)
     Alert_Update(detected, near_warning);
 
     /*
-     * 7. Ghi dữ liệu sang bridge cho TouchGFX.
+     * 9. Ghi dữ liệu sang bridge cho TouchGFX.
      * Đọc lại enabled/speed/mode trước khi SetData để tránh ghi đè lựa chọn UI.
      */
     data.radar_enabled = RadarUiBridge_GetRadarEnabled();
@@ -480,7 +524,7 @@ void RadarApp_TaskLoop(void)
     RadarUiBridge_SetData(&data);
 
     /*
-     * 8. Debug UART.
+     * 10. Debug UART.
      */
     static uint32_t debug_enabled_last_tick = 0;
     uint32_t debug_enabled_now = HAL_GetTick();
@@ -490,10 +534,12 @@ void RadarApp_TaskLoop(void)
         debug_enabled_last_tick = debug_enabled_now;
 
         RadarDebug_Printf(
-            "RUN en=%u angle=%u dir=%d valid=%u dist=%u echo=%uus pulse=%u\r\n",
+            "RUN en=%u angle=%u uiDir=%d phyDir=%d move=%ums valid=%u dist=%u echo=%uus pulse=%u\r\n",
             (unsigned int)data.radar_enabled,
             (unsigned int)data.angle_deg,
             (int)g_direction,
+            (int)physical_direction,
+            (unsigned int)move_ms,
             (unsigned int)distance_valid,
             (unsigned int)distance_cm,
             (unsigned int)HCSR04_GetLastEchoUs(),
@@ -524,12 +570,7 @@ void RadarApp_TaskLoop(void)
     }
 
     /*
-     * 9. Cập nhật góc ảo cho UI.
+     * 11. Delay nhỏ để tránh loop quá dày.
      */
-    RadarApp_AdvanceAngle(data.scan_mode_deg, data.speed_mode);
-
-    /*
-     * Delay nhỏ để tránh loop quá dày.
-     */
-    vTaskDelay(pdMS_TO_TICKS(30));
+    vTaskDelay(pdMS_TO_TICKS(RADAR_LOOP_IDLE_MS));
 }

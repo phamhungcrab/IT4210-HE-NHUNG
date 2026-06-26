@@ -15,18 +15,33 @@
  * Servo signal = PB4 GPIO output.
  *
  * Servo 360 continuous:
- * - 1500us: stop
- * - >1500us: quay một chiều
- * - <1500us: quay chiều ngược lại
+ * - STOP_US: dừng gần đúng
+ * - STOP_US + delta: quay một chiều
+ * - STOP_US - delta: quay chiều ngược lại
  */
 
 #define SERVO_GPIO_PORT   GPIOB
 #define SERVO_GPIO_PIN    GPIO_PIN_4
 
+/*
+ * Nếu radar_config.h chưa có thì dùng fallback.
+ * Nếu radar_config.h đã có thì không define lại nữa, tránh warning redefined.
+ */
+#ifndef SERVO_360_STOP_US
 #define SERVO_360_STOP_US        1500U
-#define SERVO_360_SLOW_DELTA_US  70U
-#define SERVO_360_MED_DELTA_US   110U
-#define SERVO_360_FAST_DELTA_US  160U
+#endif
+
+#ifndef SERVO_360_SLOW_DELTA_US
+#define SERVO_360_SLOW_DELTA_US  35U
+#endif
+
+#ifndef SERVO_360_MED_DELTA_US
+#define SERVO_360_MED_DELTA_US   55U
+#endif
+
+#ifndef SERVO_360_FAST_DELTA_US
+#define SERVO_360_FAST_DELTA_US  80U
+#endif
 
 static volatile uint16_t g_last_angle = SERVO_CENTER_ANGLE_DEG;
 static volatile uint16_t g_last_pulse_us = SERVO_360_STOP_US;
@@ -59,7 +74,8 @@ static void Servo_DelayUs(uint32_t us)
     while ((DWT->CYCCNT - start) < ticks)
     {
         /*
-         * Chỉ busy-wait 1.3ms - 1.7ms cho xung servo.
+         * Busy wait ngắn cho phần HIGH của xung servo.
+         * Thường chỉ 1.4ms - 1.6ms.
          */
     }
 }
@@ -84,7 +100,7 @@ static void Servo_PWM_Task(void *argument)
         }
 
         /*
-         * Chu kỳ servo 20ms.
+         * Servo frame 20ms / 50Hz.
          */
         HAL_GPIO_WritePin(SERVO_GPIO_PORT, SERVO_GPIO_PIN, GPIO_PIN_SET);
         Servo_DelayUs(pulse_us);
@@ -94,12 +110,12 @@ static void Servo_PWM_Task(void *argument)
         low_us = 20000U - pulse_us;
 
         /*
-         * Nhường CPU phần lớn thời gian.
+         * Nhường CPU phần lớn chu kỳ để TouchGFX không bị nghẽn.
          */
         vTaskDelay(pdMS_TO_TICKS(low_us / 1000U));
 
         /*
-         * Bù phần lẻ us.
+         * Bù phần lẻ micro giây.
          */
         Servo_DelayUs(low_us % 1000U);
     }
@@ -113,6 +129,10 @@ void Servo_Init(void)
 
     __HAL_RCC_GPIOB_CLK_ENABLE();
 
+    /*
+     * PB4 = GPIO output push-pull.
+     * Không cần CubeMX cấu hình PB4.
+     */
     HAL_GPIO_DeInit(SERVO_GPIO_PORT, SERVO_GPIO_PIN);
 
     GPIO_InitStruct.Pin = SERVO_GPIO_PIN;
@@ -167,8 +187,9 @@ void Servo_Stop(void)
 }
 
 /*
- * Với servo 360, hàm SetAngle không còn điều khiển vị trí thật.
- * Ta giữ hàm này để code cũ gọi 90 thì servo dừng.
+ * Giữ hàm này để code cũ không lỗi compile.
+ * Với servo 360, SetAngle không thể set góc thật.
+ * Gọi SetAngle thì chỉ lưu góc ảo và dừng servo.
  */
 void Servo_SetAngle(uint16_t angle_deg)
 {
@@ -179,10 +200,6 @@ void Servo_SetAngle(uint16_t angle_deg)
 
     g_last_angle = angle_deg;
 
-    /*
-     * Không map 0..180 sang 1000..2000 nữa.
-     * Servo 360 không có khái niệm góc tuyệt đối.
-     */
     Servo_Stop();
 }
 
