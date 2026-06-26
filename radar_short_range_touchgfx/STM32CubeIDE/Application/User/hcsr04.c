@@ -24,6 +24,12 @@ static volatile uint32_t g_falling_tick = 0;
 static volatile uint32_t g_echo_us = 0;
 static volatile uint32_t g_measure_start_ms = 0;
 
+static volatile uint32_t g_start_count = 0;
+static volatile uint32_t g_rising_count = 0;
+static volatile uint32_t g_falling_count = 0;
+static volatile uint32_t g_timeout_count = 0;
+
+
 static void HCSR04_DWT_Init(void)
 {
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
@@ -73,6 +79,7 @@ void HCSR04_StartMeasure(void)
     g_measure_start_ms = HAL_GetTick();
 
     g_state = HCSR04_STATE_WAIT_RISING;
+    g_start_count++;
 
     __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
 
@@ -109,7 +116,31 @@ uint8_t HCSR04_GetDistanceCm(uint16_t *distance_cm)
         return 0;
     }
 
+    *distance_cm = 0;
+
     if (g_state != HCSR04_STATE_DONE)
+    {
+        return 0;
+    }
+
+    /*
+     * Lọc nhiễu:
+     * HC-SR04 có khoảng đo thực tế từ khoảng 2 cm trở lên.
+     * 2 cm tương đương khoảng 2 * 58 = 116 us.
+     *
+     * Nếu echo_us chỉ 2us, 6us, 19us... thì đó là glitch/nhiễu,
+     * không phải echo thật.
+     */
+    if (g_echo_us < (RADAR_MIN_DISTANCE_CM * 58U))
+    {
+        return 0;
+    }
+
+    /*
+     * Lọc xung quá dài bất thường.
+     * Timeout hiện là 35ms, nên echo lớn hơn mức này cũng bỏ.
+     */
+    if (g_echo_us > (HCSR04_TIMEOUT_MS * 1000U))
     {
         return 0;
     }
@@ -137,8 +168,9 @@ void HCSR04_ProcessTimeout(void)
     {
         if ((HAL_GetTick() - g_measure_start_ms) > HCSR04_TIMEOUT_MS)
         {
-            g_state = HCSR04_STATE_TIMEOUT;
-            g_echo_us = 0;
+        	g_state = HCSR04_STATE_TIMEOUT;
+        	g_echo_us = 0;
+        	g_timeout_count++;
             __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
         }
     }
@@ -158,13 +190,16 @@ void HCSR04_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 
     if (g_state == HCSR04_STATE_WAIT_RISING)
     {
+        g_rising_count++;
+
         g_rising_tick = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
         g_state = HCSR04_STATE_WAIT_FALLING;
-
         __HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_FALLING);
     }
     else if (g_state == HCSR04_STATE_WAIT_FALLING)
     {
+        g_falling_count++;
+
         g_falling_tick = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
 
         if (g_falling_tick >= g_rising_tick)
@@ -177,7 +212,36 @@ void HCSR04_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
         }
 
         g_state = HCSR04_STATE_DONE;
-
         __HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
     }
+}
+
+HCSR04_State_t HCSR04_GetState(void)
+{
+    return g_state;
+}
+
+uint32_t HCSR04_GetStartCount(void)
+{
+    return g_start_count;
+}
+
+uint32_t HCSR04_GetRisingCount(void)
+{
+    return g_rising_count;
+}
+
+uint32_t HCSR04_GetFallingCount(void)
+{
+    return g_falling_count;
+}
+
+uint32_t HCSR04_GetTimeoutCount(void)
+{
+    return g_timeout_count;
+}
+
+uint32_t HCSR04_GetLastEchoUs(void)
+{
+    return g_echo_us;
 }

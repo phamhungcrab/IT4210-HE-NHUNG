@@ -506,6 +506,15 @@ void RadarApp_TaskLoop(void)
                           data.distance_cm,
                           HCSR04_GetEchoUs());
 
+
+        RadarDebug_Printf("HCSR04 st=%u start=%lu rise=%lu fall=%lu tout=%lu echo=%luus\r\n",
+                          HCSR04_GetState(),
+                          HCSR04_GetStartCount(),
+                          HCSR04_GetRisingCount(),
+                          HCSR04_GetFallingCount(),
+                          HCSR04_GetTimeoutCount(),
+                          HCSR04_GetLastEchoUs());
+
         RadarDebug_Printf("    detect=%u near=%u status=%u obj=%u lastDist=%u lastAng=%u\r\n",
                           data.object_detected,
                           data.near_warning,

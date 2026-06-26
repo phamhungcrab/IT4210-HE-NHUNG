@@ -1,7 +1,6 @@
 #ifndef HCSR04_H
 #define HCSR04_H
 
-#include <stdint.h>
 #include "stm32f4xx_hal.h"
 
 #ifdef __cplusplus
@@ -30,11 +29,23 @@ uint32_t HCSR04_GetEchoUs(void);
 
 void HCSR04_ProcessTimeout(void);
 
-/* Gọi hàm này trong HAL_TIM_IC_CaptureCallback */
+/*
+ * Gọi hàm này trong HAL_TIM_IC_CaptureCallback().
+ */
 void HCSR04_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim);
+
+/*
+ * Debug counters for Hercules.
+ */
+HCSR04_State_t HCSR04_GetState(void);
+uint32_t HCSR04_GetStartCount(void);
+uint32_t HCSR04_GetRisingCount(void);
+uint32_t HCSR04_GetFallingCount(void);
+uint32_t HCSR04_GetTimeoutCount(void);
+uint32_t HCSR04_GetLastEchoUs(void);
 
 #ifdef __cplusplus
 }
 #endif
 
-#endif
+#endif /* HCSR04_H */

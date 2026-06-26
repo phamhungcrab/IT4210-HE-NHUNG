@@ -27,6 +27,7 @@
 #include "Components/ili9341/ili9341.h"
 #include "hcsr04.h"
 #include "radar_app.h"
+#include "radar_debug.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
