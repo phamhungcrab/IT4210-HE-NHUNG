@@ -3,22 +3,33 @@
 #include "radar_config.h"
 
 /*
- * HC-SR04:
- * - TRIG: PA2 GPIO_Output
- * - ECHO: PA5 TIM2_CH1 Input Capture
+ * HC-SR04 EXTI + DWT VERSION
  *
- * Logic:
- * 1. HCSR04_StartMeasure() phát TRIG 10us.
- * 2. TIM2 bắt cạnh lên Echo -> lưu start.
- * 3. Đổi polarity sang falling.
- * 4. TIM2 bắt cạnh xuống Echo -> lưu end.
- * 5. echo_us = end - start.
- * 6. distance_cm = echo_us / 58.
+ * TRIG = PG2
+ * ECHO = PG3 / EXTI3 rising + falling
+ *
+ * Không polling chờ Echo nữa.
+ * Không dùng TIM2 input capture nữa.
+ *
+ * Luồng:
+ * - HCSR04_StartMeasure(): phát TRIG 10us rồi thoát.
+ * - PG3 rising interrupt: lưu thời điểm bắt đầu Echo.
+ * - PG3 falling interrupt: lưu thời điểm kết thúc Echo, tính echo_us.
  */
 
 extern TIM_HandleTypeDef htim2;
 
+#define HCSR04_TRIG_PORT   GPIOG
+#define HCSR04_TRIG_PIN    GPIO_PIN_2
+
+#define HCSR04_ECHO_PORT   GPIOG
+#define HCSR04_ECHO_PIN    GPIO_PIN_3
+
 static volatile HCSR04_State_t g_state = HCSR04_STATE_IDLE;
+
+static volatile uint32_t g_rising_cycle = 0;
+static volatile uint32_t g_falling_cycle = 0;
+
 static volatile uint32_t g_rising_tick = 0;
 static volatile uint32_t g_falling_tick = 0;
 static volatile uint32_t g_echo_us = 0;
@@ -29,40 +40,101 @@ static volatile uint32_t g_rising_count = 0;
 static volatile uint32_t g_falling_count = 0;
 static volatile uint32_t g_timeout_count = 0;
 
+static volatile uint32_t g_dbg_trig_high_read = 0;
+static volatile uint32_t g_dbg_echo_high_read = 0;
+
+static uint32_t g_cycles_per_us = 0;
 
 static void HCSR04_DWT_Init(void)
 {
     CoreDebug->DEMCR |= CoreDebug_DEMCR_TRCENA_Msk;
     DWT->CTRL |= DWT_CTRL_CYCCNTENA_Msk;
+    DWT->CYCCNT = 0;
+
+    g_cycles_per_us = HAL_RCC_GetHCLKFreq() / 1000000U;
 }
 
 static void HCSR04_DelayUs(uint32_t us)
 {
-    uint32_t start = DWT->CYCCNT;
-    uint32_t ticks = us * (HAL_RCC_GetHCLKFreq() / 1000000U);
+    uint32_t start;
+    uint32_t ticks;
+
+    if (g_cycles_per_us == 0U)
+    {
+        g_cycles_per_us = HAL_RCC_GetHCLKFreq() / 1000000U;
+    }
+
+    start = DWT->CYCCNT;
+    ticks = us * g_cycles_per_us;
 
     while ((DWT->CYCCNT - start) < ticks)
     {
-        /* delay 10us rất ngắn, chấp nhận được cho trigger */
+        /* busy wait only for TRIG 10us */
     }
 }
 
 void HCSR04_Init(void)
 {
+    GPIO_InitTypeDef GPIO_InitStruct = {0};
+
     HCSR04_DWT_Init();
 
     g_state = HCSR04_STATE_IDLE;
-    g_echo_us = 0;
 
-    __HAL_TIM_SET_COUNTER(&htim2, 0);
+    g_rising_cycle = 0;
+    g_falling_cycle = 0;
+    g_rising_tick = 0;
+    g_falling_tick = 0;
+    g_echo_us = 0;
+    g_measure_start_ms = 0;
+
+    g_start_count = 0;
+    g_rising_count = 0;
+    g_falling_count = 0;
+    g_timeout_count = 0;
+
+    g_dbg_trig_high_read = 0;
+    g_dbg_echo_high_read = 0;
 
     /*
-     * Start input capture interrupt một lần.
-     * Sau đó mỗi lần đo chỉ reset state và phát TRIG.
+     * Không dùng TIM2 capture nữa.
      */
-    HAL_TIM_IC_Start_IT(&htim2, TIM_CHANNEL_1);
+    HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_1);
 
-    __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
+    __HAL_RCC_GPIOG_CLK_ENABLE();
+    __HAL_RCC_SYSCFG_CLK_ENABLE();
+
+    /*
+     * PG2 = TRIG output
+     */
+    HAL_GPIO_DeInit(HCSR04_TRIG_PORT, HCSR04_TRIG_PIN);
+
+    GPIO_InitStruct.Pin = HCSR04_TRIG_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+    HAL_GPIO_Init(HCSR04_TRIG_PORT, &GPIO_InitStruct);
+
+    HAL_GPIO_WritePin(HCSR04_TRIG_PORT, HCSR04_TRIG_PIN, GPIO_PIN_RESET);
+
+    /*
+     * PG3 = ECHO EXTI rising + falling
+     */
+    HAL_GPIO_DeInit(HCSR04_ECHO_PORT, HCSR04_ECHO_PIN);
+
+    GPIO_InitStruct.Pin = HCSR04_ECHO_PIN;
+    GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
+    GPIO_InitStruct.Pull = GPIO_NOPULL;
+    HAL_GPIO_Init(HCSR04_ECHO_PORT, &GPIO_InitStruct);
+
+    /*
+     * EXTI3 interrupt cho PG3.
+     * Priority 6 để thấp hơn/không phá FreeRTOS.
+     */
+    __HAL_GPIO_EXTI_CLEAR_IT(HCSR04_ECHO_PIN);
+    HAL_NVIC_ClearPendingIRQ(EXTI3_IRQn);
+    HAL_NVIC_SetPriority(EXTI3_IRQn, 6, 0);
+    HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 }
 
 void HCSR04_StartMeasure(void)
@@ -73,22 +145,114 @@ void HCSR04_StartMeasure(void)
         return;
     }
 
+    if (g_cycles_per_us == 0U)
+    {
+        g_cycles_per_us = HAL_RCC_GetHCLKFreq() / 1000000U;
+    }
+
+    g_rising_cycle = 0;
+    g_falling_cycle = 0;
     g_rising_tick = 0;
     g_falling_tick = 0;
     g_echo_us = 0;
-    g_measure_start_ms = HAL_GetTick();
 
+    g_dbg_trig_high_read = 0;
+    g_dbg_echo_high_read = 0;
+
+    g_measure_start_ms = HAL_GetTick();
     g_state = HCSR04_STATE_WAIT_RISING;
     g_start_count++;
 
-    __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
+    __HAL_GPIO_EXTI_CLEAR_IT(HCSR04_ECHO_PIN);
 
-    HAL_GPIO_WritePin(HCSR04_TRIG_GPIO_Port, HCSR04_TRIG_Pin, GPIO_PIN_RESET);
+    /*
+     * Phát TRIG 10us.
+     */
+    HAL_GPIO_WritePin(HCSR04_TRIG_PORT, HCSR04_TRIG_PIN, GPIO_PIN_RESET);
     HCSR04_DelayUs(2);
 
-    HAL_GPIO_WritePin(HCSR04_TRIG_GPIO_Port, HCSR04_TRIG_Pin, GPIO_PIN_SET);
+    HAL_GPIO_WritePin(HCSR04_TRIG_PORT, HCSR04_TRIG_PIN, GPIO_PIN_SET);
+
+    g_dbg_trig_high_read =
+        (HAL_GPIO_ReadPin(HCSR04_TRIG_PORT, HCSR04_TRIG_PIN) == GPIO_PIN_SET) ? 1U : 0U;
+
+    g_dbg_echo_high_read =
+        (HAL_GPIO_ReadPin(HCSR04_ECHO_PORT, HCSR04_ECHO_PIN) == GPIO_PIN_SET) ? 1U : 0U;
+
     HCSR04_DelayUs(HCSR04_TRIGGER_PULSE_US);
-    HAL_GPIO_WritePin(HCSR04_TRIG_GPIO_Port, HCSR04_TRIG_Pin, GPIO_PIN_RESET);
+
+    HAL_GPIO_WritePin(HCSR04_TRIG_PORT, HCSR04_TRIG_PIN, GPIO_PIN_RESET);
+}
+
+void HCSR04_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    uint32_t now_cycle;
+
+    if (GPIO_Pin != HCSR04_ECHO_PIN)
+    {
+        return;
+    }
+
+    if (g_cycles_per_us == 0U)
+    {
+        g_cycles_per_us = HAL_RCC_GetHCLKFreq() / 1000000U;
+        if (g_cycles_per_us == 0U)
+        {
+            return;
+        }
+    }
+
+    now_cycle = DWT->CYCCNT;
+
+    /*
+     * Rising edge: Echo vừa lên.
+     */
+    if (g_state == HCSR04_STATE_WAIT_RISING)
+    {
+        if (HAL_GPIO_ReadPin(HCSR04_ECHO_PORT, HCSR04_ECHO_PIN) == GPIO_PIN_SET)
+        {
+            g_rising_cycle = now_cycle;
+            g_rising_tick = now_cycle / g_cycles_per_us;
+
+            g_rising_count++;
+            g_state = HCSR04_STATE_WAIT_FALLING;
+        }
+
+        return;
+    }
+
+    /*
+     * Falling edge: Echo vừa xuống.
+     */
+    if (g_state == HCSR04_STATE_WAIT_FALLING)
+    {
+        if (HAL_GPIO_ReadPin(HCSR04_ECHO_PORT, HCSR04_ECHO_PIN) == GPIO_PIN_RESET)
+        {
+            g_falling_cycle = now_cycle;
+            g_falling_tick = now_cycle / g_cycles_per_us;
+
+            g_falling_count++;
+
+            g_echo_us = (g_falling_cycle - g_rising_cycle) / g_cycles_per_us;
+            g_state = HCSR04_STATE_DONE;
+        }
+
+        return;
+    }
+}
+
+void HCSR04_ProcessTimeout(void)
+{
+    if (g_state == HCSR04_STATE_WAIT_RISING ||
+        g_state == HCSR04_STATE_WAIT_FALLING)
+    {
+        if ((HAL_GetTick() - g_measure_start_ms) > HCSR04_TIMEOUT_MS)
+        {
+            g_state = HCSR04_STATE_TIMEOUT;
+            g_timeout_count++;
+            g_echo_us = 0;
+        }
+    }
 }
 
 uint8_t HCSR04_IsBusy(void)
@@ -123,23 +287,11 @@ uint8_t HCSR04_GetDistanceCm(uint16_t *distance_cm)
         return 0;
     }
 
-    /*
-     * Lọc nhiễu:
-     * HC-SR04 có khoảng đo thực tế từ khoảng 2 cm trở lên.
-     * 2 cm tương đương khoảng 2 * 58 = 116 us.
-     *
-     * Nếu echo_us chỉ 2us, 6us, 19us... thì đó là glitch/nhiễu,
-     * không phải echo thật.
-     */
     if (g_echo_us < (RADAR_MIN_DISTANCE_CM * 58U))
     {
         return 0;
     }
 
-    /*
-     * Lọc xung quá dài bất thường.
-     * Timeout hiện là 35ms, nên echo lớn hơn mức này cũng bỏ.
-     */
     if (g_echo_us > (HCSR04_TIMEOUT_MS * 1000U))
     {
         return 0;
@@ -161,59 +313,12 @@ uint32_t HCSR04_GetEchoUs(void)
     return g_echo_us;
 }
 
-void HCSR04_ProcessTimeout(void)
-{
-    if (g_state == HCSR04_STATE_WAIT_RISING ||
-        g_state == HCSR04_STATE_WAIT_FALLING)
-    {
-        if ((HAL_GetTick() - g_measure_start_ms) > HCSR04_TIMEOUT_MS)
-        {
-        	g_state = HCSR04_STATE_TIMEOUT;
-        	g_echo_us = 0;
-        	g_timeout_count++;
-            __HAL_TIM_SET_CAPTUREPOLARITY(&htim2, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
-        }
-    }
-}
-
 void HCSR04_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
-    if (htim->Instance != TIM2)
-    {
-        return;
-    }
-
-    if (htim->Channel != HAL_TIM_ACTIVE_CHANNEL_1)
-    {
-        return;
-    }
-
-    if (g_state == HCSR04_STATE_WAIT_RISING)
-    {
-        g_rising_count++;
-
-        g_rising_tick = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-        g_state = HCSR04_STATE_WAIT_FALLING;
-        __HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_FALLING);
-    }
-    else if (g_state == HCSR04_STATE_WAIT_FALLING)
-    {
-        g_falling_count++;
-
-        g_falling_tick = HAL_TIM_ReadCapturedValue(htim, TIM_CHANNEL_1);
-
-        if (g_falling_tick >= g_rising_tick)
-        {
-            g_echo_us = g_falling_tick - g_rising_tick;
-        }
-        else
-        {
-            g_echo_us = (0xFFFFFFFFU - g_rising_tick) + g_falling_tick + 1U;
-        }
-
-        g_state = HCSR04_STATE_DONE;
-        __HAL_TIM_SET_CAPTUREPOLARITY(htim, TIM_CHANNEL_1, TIM_INPUTCHANNELPOLARITY_RISING);
-    }
+    /*
+     * Không dùng TIM2 input capture nữa.
+     */
+    (void)htim;
 }
 
 HCSR04_State_t HCSR04_GetState(void)
@@ -244,4 +349,23 @@ uint32_t HCSR04_GetTimeoutCount(void)
 uint32_t HCSR04_GetLastEchoUs(void)
 {
     return g_echo_us;
+}
+
+uint32_t HCSR04_DebugGetPA2HighRead(void)
+{
+    /*
+     * Giữ tên cũ cho radar_app.c.
+     * Giá trị này hiện là TRIG PG2.
+     */
+    return g_dbg_trig_high_read;
+}
+
+uint32_t HCSR04_DebugGetPA5HighRead(void)
+{
+    /*
+     * Giữ tên cũ cho radar_app.c.
+     * Giá trị này hiện là ECHO PG3 tại lúc vừa phát TRIG.
+     * Với SR04 thật thường = 0 là bình thường.
+     */
+    return g_dbg_echo_high_read;
 }

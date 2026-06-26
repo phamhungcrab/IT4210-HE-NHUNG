@@ -7,9 +7,9 @@ extern "C" {
 
 /* ===== Distance config ===== */
 #define RADAR_MIN_DISTANCE_CM            2U
-#define RADAR_MAX_DISPLAY_CM             150U
-#define RADAR_OBJECT_DETECT_CM           150U
-#define RADAR_NEAR_WARNING_CM            20U
+#define RADAR_MAX_DISPLAY_CM             100U
+#define RADAR_OBJECT_DETECT_CM           100U
+#define RADAR_NEAR_WARNING_CM            10U
 
 /* ===== Servo MG90S PWM config =====
  * TIM5_CH2 PA1 đã cấu hình 50Hz:
@@ -46,7 +46,7 @@ extern "C" {
 
 /* ===== HC-SR04 ===== */
 #define HCSR04_TRIGGER_PULSE_US          10U
-#define HCSR04_TIMEOUT_MS                35U
+#define HCSR04_TIMEOUT_MS                15U
 
 /* ===== UI geometry for target dot ===== */
 #define RADAR_UI_CENTER_X                120

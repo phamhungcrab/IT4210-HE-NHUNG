@@ -103,7 +103,7 @@ osThreadId_t radarTaskHandle;
 const osThreadAttr_t radarTask_attributes = {
   .name = "radarTask",
   .stack_size = 1024 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
+  .priority = (osPriority_t) osPriorityLow,
 };
 /* USER CODE END PV */
 
@@ -835,6 +835,10 @@ static void MX_GPIO_Init(void)
 }
 
 /* USER CODE BEGIN 4 */
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    HCSR04_GPIO_EXTI_Callback(GPIO_Pin);
+}
 void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
 {
     HCSR04_TIM_IC_CaptureCallback(htim);

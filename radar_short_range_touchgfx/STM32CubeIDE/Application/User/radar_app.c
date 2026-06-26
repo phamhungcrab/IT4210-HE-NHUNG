@@ -216,8 +216,8 @@ void RadarApp_Init(void)
     RadarUiBridge_Init();
 
     Servo_Init();
-    HCSR04_Init();
     BuzzerLed_Init();
+    HCSR04_Init();
 
     g_angle = SERVO_CENTER_ANGLE_DEG;
     g_direction = 1;
@@ -441,10 +441,10 @@ void RadarApp_TaskLoop(void)
     /*
      * 7. LED / buzzer.
      */
-    g_scan_led_state = !g_scan_led_state;
-    LedScan_Set(g_scan_led_state);
+    g_scan_led_state = 0;
+    /* PG13/PG14 đang dùng cho HCSR04 test, không dùng LED3/LED4 */
 
-    Alert_Update(detected, near_warning);
+    Buzzer_Set(near_warning);
 
     /*
      * 8. Ghi dữ liệu mới sang bridge cho TouchGFX đọc.
@@ -478,8 +478,8 @@ void RadarApp_TaskLoop(void)
     }
 
     data.buzzer_on = near_warning ? 1U : 0U;
-    data.led3_on   = g_scan_led_state ? 1U : 0U;
-    data.led4_on   = (detected || near_warning) ? 1U : 0U;
+    data.led3_on   = 0;
+    data.led4_on   = 0;
 
     /*
      * OLED chưa ghép ở bước này.
@@ -499,21 +499,27 @@ void RadarApp_TaskLoop(void)
     {
         debug_enabled_last_tick = debug_enabled_now;
 
-        RadarDebug_Printf("RUN en=%u angle=%u valid=%u dist=%u echo=%luus\r\n",
-                          data.radar_enabled,
-                          data.angle_deg,
-                          data.distance_valid,
-                          data.distance_cm,
-                          HCSR04_GetEchoUs());
+        RadarDebug_Printf(
+            "RUN en=%u angle=%u valid=%u dist=%u echo=%uus\r\n",
+            (unsigned int)data.radar_enabled,
+            (unsigned int)data.angle_deg,
+            (unsigned int)distance_valid,
+            (unsigned int)distance_cm,
+            (unsigned int)HCSR04_GetLastEchoUs()
+        );
 
 
-        RadarDebug_Printf("HCSR04 st=%u start=%lu rise=%lu fall=%lu tout=%lu echo=%luus\r\n",
-                          HCSR04_GetState(),
-                          HCSR04_GetStartCount(),
-                          HCSR04_GetRisingCount(),
-                          HCSR04_GetFallingCount(),
-                          HCSR04_GetTimeoutCount(),
-                          HCSR04_GetLastEchoUs());
+        RadarDebug_Printf(
+            "HCSR04 st=%u start=%u rise=%u fall=%u tout=%u echo=%uus pa2=%u pa5=%u\r\n",
+            (unsigned int)HCSR04_GetState(),
+            (unsigned int)HCSR04_GetStartCount(),
+            (unsigned int)HCSR04_GetRisingCount(),
+            (unsigned int)HCSR04_GetFallingCount(),
+            (unsigned int)HCSR04_GetTimeoutCount(),
+            (unsigned int)HCSR04_GetLastEchoUs(),
+            (unsigned int)HCSR04_DebugGetPA2HighRead(),
+            (unsigned int)HCSR04_DebugGetPA5HighRead()
+        );
 
         RadarDebug_Printf("    detect=%u near=%u status=%u obj=%u lastDist=%u lastAng=%u\r\n",
                           data.object_detected,
@@ -532,5 +538,7 @@ void RadarApp_TaskLoop(void)
     /*
      * 10. Delay theo tốc độ servo.
      */
-    vTaskDelay(pdMS_TO_TICKS(RadarApp_GetDelayMs(data.speed_mode)));
+//    vTaskDelay(pdMS_TO_TICKS(RadarApp_GetDelayMs(data.speed_mode)));
+    vTaskDelay(pdMS_TO_TICKS(300));
+
 }
