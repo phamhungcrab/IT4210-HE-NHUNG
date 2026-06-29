@@ -874,22 +874,17 @@ static void MX_GPIO_Init(void)
   HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */
-  /* PG2, PG3: button input with pull-up */
-  GPIO_InitStruct.Pin = GPIO_PIN_2 | GPIO_PIN_3;
-  GPIO_InitStruct.Mode = GPIO_MODE_INPUT;
-  GPIO_InitStruct.Pull = GPIO_PULLUP;
-  HAL_GPIO_Init(GPIOG, &GPIO_InitStruct);
+  /* Keep empty. PG2/PG3 are owned by CubeMX. */
   /* USER CODE END MX_GPIO_Init_2 */
 }
 
 /* USER CODE BEGIN 4 */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
 {
-    HCSR04_GPIO_EXTI_Callback(GPIO_Pin);
-}
-void HAL_TIM_IC_CaptureCallback(TIM_HandleTypeDef *htim)
-{
-    HCSR04_TIM_IC_CaptureCallback(htim);
+    if (GPIO_Pin == HCSR04_ECHO_Pin)
+    {
+        HCSR04_GPIO_EXTI_Callback(GPIO_Pin);
+    }
 }
 static void StartRadarTask(void *argument)
 {

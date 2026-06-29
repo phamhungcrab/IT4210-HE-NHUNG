@@ -3,20 +3,15 @@
 
 extern TIM_HandleTypeDef htim3;
 
-#define SERVO_MIN_ANGLE_DEG   0U
-#define SERVO_MAX_ANGLE_DEG   360U
+#include "radar_config.h"
 
-#define SERVO_MIN_PULSE_US    500U
-#define SERVO_MAX_PULSE_US    2500U
-#define SERVO_STOP_PULSE_US   1500U
-
-static uint16_t g_last_angle_deg = 90U;
-static uint16_t g_last_pulse_us = SERVO_STOP_PULSE_US;
+static uint16_t g_last_angle_deg = SERVO_CENTER_ANGLE_DEG;
+static uint16_t g_last_pulse_us = SERVO_CENTER_PULSE_US;
 
 void Servo_Init(void)
 {
     HAL_TIM_PWM_Start(&htim3, TIM_CHANNEL_1);
-    Servo_SetAngle(90U);
+    Servo_SetAngle(SERVO_CENTER_ANGLE_DEG);
 }
 
 void Servo_SetPulseUs(uint16_t pulse_us)
@@ -55,7 +50,7 @@ void Servo_SetAngle(uint16_t angle_deg)
 
 void Servo_Stop(void)
 {
-    Servo_SetAngle(90U);
+    Servo_SetAngle(SERVO_CENTER_ANGLE_DEG);
 }
 
 uint16_t Servo_GetLastAngle(void)

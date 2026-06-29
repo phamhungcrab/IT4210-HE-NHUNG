@@ -12,7 +12,7 @@ extern "C" {
 #define RADAR_NEAR_WARNING_CM            10U
 
 /* ===== Servo MG90S PWM config =====
- * TIM5_CH2 PA1 đã cấu hình 50Hz:
+ * TIM3_CH1 PB4 đã cấu hình 50Hz
  * PSC = 89, ARR = 19999
  * => 1 tick = 1 us, period = 20000 us.
  */

@@ -17,13 +17,11 @@
  * - PG3 falling interrupt: lưu thời điểm kết thúc Echo, tính echo_us.
  */
 
-extern TIM_HandleTypeDef htim2;
+#define HCSR04_TRIG_PORT   HCSR04_TRIG_GPIO_Port
+#define HCSR04_TRIG_PIN    HCSR04_TRIG_Pin
 
-#define HCSR04_TRIG_PORT   GPIOG
-#define HCSR04_TRIG_PIN    GPIO_PIN_2
-
-#define HCSR04_ECHO_PORT   GPIOG
-#define HCSR04_ECHO_PIN    GPIO_PIN_3
+#define HCSR04_ECHO_PORT   HCSR04_ECHO_GPIO_Port
+#define HCSR04_ECHO_PIN    HCSR04_ECHO_Pin
 
 static volatile HCSR04_State_t g_state = HCSR04_STATE_IDLE;
 
@@ -75,8 +73,6 @@ static void HCSR04_DelayUs(uint32_t us)
 
 void HCSR04_Init(void)
 {
-    GPIO_InitTypeDef GPIO_InitStruct = {0};
-
     HCSR04_DWT_Init();
 
     g_state = HCSR04_STATE_IDLE;
@@ -96,45 +92,8 @@ void HCSR04_Init(void)
     g_dbg_trig_high_read = 0;
     g_dbg_echo_high_read = 0;
 
-    /*
-     * Không dùng TIM2 capture nữa.
-     */
-    HAL_TIM_IC_Stop_IT(&htim2, TIM_CHANNEL_1);
-
-    __HAL_RCC_GPIOG_CLK_ENABLE();
-    __HAL_RCC_SYSCFG_CLK_ENABLE();
-
-    /*
-     * PG2 = TRIG output
-     */
-    HAL_GPIO_DeInit(HCSR04_TRIG_PORT, HCSR04_TRIG_PIN);
-
-    GPIO_InitStruct.Pin = HCSR04_TRIG_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
-    HAL_GPIO_Init(HCSR04_TRIG_PORT, &GPIO_InitStruct);
-
     HAL_GPIO_WritePin(HCSR04_TRIG_PORT, HCSR04_TRIG_PIN, GPIO_PIN_RESET);
-
-    /*
-     * PG3 = ECHO EXTI rising + falling
-     */
-    HAL_GPIO_DeInit(HCSR04_ECHO_PORT, HCSR04_ECHO_PIN);
-
-    GPIO_InitStruct.Pin = HCSR04_ECHO_PIN;
-    GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    HAL_GPIO_Init(HCSR04_ECHO_PORT, &GPIO_InitStruct);
-
-    /*
-     * EXTI3 interrupt cho PG3.
-     * Priority 6 để thấp hơn/không phá FreeRTOS.
-     */
     __HAL_GPIO_EXTI_CLEAR_IT(HCSR04_ECHO_PIN);
-    HAL_NVIC_ClearPendingIRQ(EXTI3_IRQn);
-    HAL_NVIC_SetPriority(EXTI3_IRQn, 6, 0);
-    HAL_NVIC_EnableIRQ(EXTI3_IRQn);
 }
 
 void HCSR04_StartMeasure(void)

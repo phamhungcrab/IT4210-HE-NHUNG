@@ -577,34 +577,135 @@ void RadarApp_ToggleScanMode(void)
 
 void RadarApp_TaskLoop(void)
 {
-    static int16_t angle = 0;
-    static int8_t dir = 1;
-    static uint32_t last_tick = 0U;
+    RadarUiData_t data;
 
-    uint32_t now = HAL_GetTick();
+    uint8_t radar_enabled;
+    uint8_t speed_mode;
+    uint8_t scan_mode;
 
-    if ((now - last_tick) < 20U)
+    uint16_t distance_cm = 0U;
+    uint8_t distance_valid = 0U;
+
+    uint8_t detected = 0U;
+    uint8_t near_warning = 0U;
+
+    uint32_t step_delay_ms;
+
+    RadarUiBridge_GetData(&data);
+
+    radar_enabled = RadarUiBridge_GetRadarEnabled();
+    speed_mode = RadarUiBridge_GetSpeedMode();
+    scan_mode = RadarUiBridge_GetScanMode();
+
+    if (!radar_enabled)
     {
-        vTaskDelay(pdMS_TO_TICKS(1));
+        Servo_Stop();
+        RadarApp_SetSafeOutput();
+
+        RadarApp_FillStoppedData(&data, speed_mode, scan_mode);
+        RadarUiBridge_SetData(&data);
+
+        vTaskDelay(pdMS_TO_TICKS(100));
         return;
     }
 
-    last_tick = now;
+    RadarApp_ClampAngleToCurrentScanMode(scan_mode);
 
-    Servo_SetAngle((uint16_t)angle);
+    Servo_SetAngle((uint16_t)g_angle);
 
-    angle += dir;
-
-    if (angle >= 180)
+    switch (speed_mode)
     {
-        angle = 180;
-        dir = -1;
-    }
-    else if (angle <= 0)
-    {
-        angle = 0;
-        dir = 1;
+    case RADAR_SPEED_SLOW:
+        step_delay_ms = RADAR_SPEED_SLOW_DELAY_MS;
+        break;
+
+    case RADAR_SPEED_FAST:
+        step_delay_ms = RADAR_SPEED_FAST_DELAY_MS;
+        break;
+
+    case RADAR_SPEED_MED:
+    default:
+        step_delay_ms = RADAR_SPEED_MED_DELAY_MS;
+        break;
     }
 
-    vTaskDelay(pdMS_TO_TICKS(1));
+    vTaskDelay(pdMS_TO_TICKS(step_delay_ms));
+
+    distance_valid = RadarApp_MeasureDistance(&distance_cm);
+
+    if (distance_valid &&
+        distance_cm >= RADAR_MIN_DISTANCE_CM &&
+        distance_cm <= RADAR_OBJECT_DETECT_CM)
+    {
+        detected = 1U;
+
+        if (distance_cm <= RADAR_NEAR_WARNING_CM)
+        {
+            near_warning = 1U;
+        }
+    }
+
+    if (detected && !g_prev_detected)
+    {
+        data.object_count++;
+    }
+
+    if (detected)
+    {
+        data.last_object_distance_cm = distance_cm;
+        data.last_object_angle_deg = (uint16_t)g_angle;
+    }
+
+    g_prev_detected = detected;
+
+    g_scan_led_state = !g_scan_led_state;
+    LedScan_Set(g_scan_led_state);
+
+    Alert_Update(detected, near_warning);
+
+    data.radar_enabled = RadarUiBridge_GetRadarEnabled();
+    data.speed_mode = RadarUiBridge_GetSpeedMode();
+    data.scan_mode_deg = RadarUiBridge_GetScanMode();
+
+    data.angle_deg = (uint16_t)g_angle;
+    data.distance_cm = distance_cm;
+    data.distance_valid = distance_valid;
+
+    data.object_detected = detected;
+    data.near_warning = near_warning;
+
+    if (near_warning)
+    {
+        data.radar_status = RADAR_STATUS_ALERT;
+    }
+    else if (detected)
+    {
+        data.radar_status = RADAR_STATUS_DETECT;
+    }
+    else
+    {
+        data.radar_status = RADAR_STATUS_SCAN;
+    }
+
+    data.buzzer_on = near_warning ? 1U : 0U;
+    data.led3_on = g_scan_led_state ? 1U : 0U;
+    data.led4_on = (detected || near_warning) ? 1U : 0U;
+    data.oled_connected = 0U;
+
+    RadarUiBridge_SetData(&data);
+
+    RadarDebug_Printf(
+        "RADAR angle=%u valid=%u dist=%u detect=%u near=%u echo=%uus pulse=%u\r\n",
+        (unsigned int)data.angle_deg,
+        (unsigned int)data.distance_valid,
+        (unsigned int)data.distance_cm,
+        (unsigned int)data.object_detected,
+        (unsigned int)data.near_warning,
+        (unsigned int)HCSR04_GetLastEchoUs(),
+        (unsigned int)Servo_GetLastPulseUs()
+    );
+
+    RadarApp_AdvanceAngle(scan_mode, speed_mode);
+
+    vTaskDelay(pdMS_TO_TICKS(5));
 }
