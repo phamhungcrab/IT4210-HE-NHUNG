@@ -575,50 +575,36 @@ void RadarApp_ToggleScanMode(void)
 //    vTaskDelay(pdMS_TO_TICKS(RADAR_LOOP_IDLE_MS));
 //}
 
-
 void RadarApp_TaskLoop(void)
 {
-    static uint32_t log_tick_ms = 0U;
-    static uint32_t led_tick_ms = 0U;
-    static uint8_t led_state = 0U;
+    static int16_t angle = 0;
+    static int8_t dir = 1;
+    static uint32_t last_tick = 0U;
 
-    RadarUiData_t data;
     uint32_t now = HAL_GetTick();
 
-    Servo_SetPulseUs(1500U);
-
-    if ((now - log_tick_ms) >= 500U)
+    if ((now - last_tick) < 20U)
     {
-        log_tick_ms = now;
-
-        RadarDebug_Printf("[SERVO_HOLD_1500] actual=%u\r\n",
-                          (unsigned int)Servo_GetLastPulseUs());
+        vTaskDelay(pdMS_TO_TICKS(1));
+        return;
     }
 
-    if ((now - led_tick_ms) >= 500U)
+    last_tick = now;
+
+    Servo_SetAngle((uint16_t)angle);
+
+    angle += dir;
+
+    if (angle >= 180)
     {
-        led_tick_ms = now;
-        led_state = !led_state;
-        LedScan_Set(led_state);
+        angle = 180;
+        dir = -1;
+    }
+    else if (angle <= 0)
+    {
+        angle = 0;
+        dir = 1;
     }
 
-    RadarUiBridge_GetData(&data);
-
-    data.radar_enabled = 1U;
-    data.angle_deg = 90U;
-    data.distance_cm = Servo_GetLastPulseUs();
-    data.distance_valid = 1U;
-    data.object_detected = 0U;
-    data.near_warning = 0U;
-    data.radar_status = RADAR_STATUS_SCAN;
-    data.speed_mode = RADAR_SPEED_SLOW;
-    data.scan_mode_deg = RADAR_SCAN_MODE_180_DEG;
-    data.buzzer_on = 0U;
-    data.led3_on = led_state ? 1U : 0U;
-    data.led4_on = 0U;
-    data.oled_connected = 0U;
-
-    RadarUiBridge_SetData(&data);
-
-    vTaskDelay(pdMS_TO_TICKS(20));
+    vTaskDelay(pdMS_TO_TICKS(1));
 }
