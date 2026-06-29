@@ -177,6 +177,16 @@ static void RadarApp_SetSafeOutput(void)
     LedAlert_Set(0);
 }
 
+static uint16_t RadarApp_AbsDiffU16(uint16_t a, uint16_t b)
+{
+    if (a >= b)
+    {
+        return (uint16_t)(a - b);
+    }
+
+    return (uint16_t)(b - a);
+}
+
 static uint8_t RadarApp_MeasureDistance(uint16_t *distance_cm)
 {
     uint32_t wait_start;
@@ -339,242 +349,6 @@ void RadarApp_ToggleScanMode(void)
     }
 }
 
-//void RadarApp_TaskLoop(void)
-//{
-//    RadarUiData_t data;
-//
-//    uint8_t radar_enabled;
-//    uint8_t speed_mode;
-//    uint8_t scan_mode;
-//
-//    uint16_t distance_cm = 0;
-//    uint8_t distance_valid = 0;
-//
-//    uint8_t detected = 0;
-//    uint8_t near_warning = 0;
-//
-//    int8_t physical_direction;
-//    uint32_t move_ms;
-//
-//    /*
-//     * Lấy data hiện tại từ bridge để giữ object_count,
-//     * last_object_distance_cm, last_object_angle_deg...
-//     */
-//    RadarUiBridge_GetData(&data);
-//
-//    radar_enabled = RadarUiBridge_GetRadarEnabled();
-//    speed_mode    = RadarUiBridge_GetSpeedMode();
-//    scan_mode     = RadarUiBridge_GetScanMode();
-//
-//    /*
-//     * Radar đang dừng:
-//     * - servo 360 phải STOP hẳn
-//     * - tắt buzzer/LED
-//     * - UI về trạng thái stopped
-//     */
-//    if (!radar_enabled)
-//    {
-//        Servo_Stop();
-//        RadarApp_SetSafeOutput();
-//
-//        RadarApp_FillStoppedData(&data, speed_mode, scan_mode);
-//        RadarUiBridge_SetData(&data);
-//
-//        static uint32_t debug_last_tick = 0;
-//        uint32_t debug_now = HAL_GetTick();
-//
-//        if ((debug_now - debug_last_tick) >= 500U)
-//        {
-//            debug_last_tick = debug_now;
-//
-//            RadarDebug_Printf("RADAR en=%u angle=%u valid=%u dist=%u pulse=%u\r\n",
-//                              (unsigned int)data.radar_enabled,
-//                              (unsigned int)data.angle_deg,
-//                              (unsigned int)data.distance_valid,
-//                              (unsigned int)data.distance_cm,
-//                              (unsigned int)Servo_GetLastPulseUs());
-//
-//            RadarDebug_Printf("      detect=%u near=%u status=%u obj=%u lastDist=%u lastAng=%u\r\n",
-//                              (unsigned int)data.object_detected,
-//                              (unsigned int)data.near_warning,
-//                              (unsigned int)data.radar_status,
-//                              (unsigned int)data.object_count,
-//                              (unsigned int)data.last_object_distance_cm,
-//                              (unsigned int)data.last_object_angle_deg);
-//        }
-//
-//        vTaskDelay(pdMS_TO_TICKS(100));
-//        return;
-//    }
-//
-//    /*
-//     * Đang scan:
-//     * g_angle là góc ảo cho UI.
-//     * Servo 360 chỉ quay theo hướng trong một khoảng thời gian.
-//     */
-//    RadarApp_ClampAngleToCurrentScanMode(scan_mode);
-//
-//    /*
-//     * 1. Cho servo quay theo hướng UI.
-//     * Nếu servo quay ngược UI, đổi SERVO_360_DIRECTION_SIGN ở đầu file.
-//     */
-//    physical_direction = RadarApp_GetPhysicalServoDirection(g_direction);
-//    move_ms = RadarApp_GetServoMoveMs(speed_mode);
-//
-//    Servo_SetContinuous(physical_direction, speed_mode);
-//    vTaskDelay(pdMS_TO_TICKS(move_ms));
-//
-//    /*
-//     * 2. Dừng servo.
-//     */
-//    Servo_Stop();
-//
-//    /*
-//     * 3. Cập nhật góc ảo sau khi servo đã quay.
-//     * UI sẽ chạy cùng hướng g_direction.
-//     */
-//    RadarApp_AdvanceAngle(scan_mode, speed_mode);
-//
-//    /*
-//     * 4. Chờ cơ khí ổn định rồi đo SR04.
-//     */
-//    vTaskDelay(pdMS_TO_TICKS(SERVO_360_SETTLE_MS));
-//
-//    /*
-//     * 5. Đo khoảng cách.
-//     */
-//    distance_valid = RadarApp_MeasureDistance(&distance_cm);
-//
-//    /*
-//     * 6. Xác định phát hiện vật / cảnh báo gần.
-//     */
-//    if (distance_valid &&
-//        distance_cm >= RADAR_MIN_DISTANCE_CM &&
-//        distance_cm <= RADAR_OBJECT_DETECT_CM)
-//    {
-//        detected = 1;
-//
-//        if (distance_cm <= RADAR_NEAR_WARNING_CM)
-//        {
-//            near_warning = 1;
-//        }
-//    }
-//
-//    /*
-//     * 7. Đếm object: chỉ tăng khi chuyển từ không có vật -> có vật.
-//     */
-//    if (detected && !g_prev_detected)
-//    {
-//        data.object_count++;
-//    }
-//
-//    /*
-//     * Update khoảng cách + góc ảo cuối cùng khi đang thấy vật.
-//     */
-//    if (detected)
-//    {
-//        data.last_object_distance_cm = distance_cm;
-//        data.last_object_angle_deg   = (uint16_t)g_angle;
-//    }
-//
-//    g_prev_detected = detected;
-//
-//    /*
-//     * 8. LED / buzzer.
-//     */
-//    g_scan_led_state = !g_scan_led_state;
-//    LedScan_Set(g_scan_led_state);
-//
-//    Alert_Update(detected, near_warning);
-//
-//    /*
-//     * 9. Ghi dữ liệu sang bridge cho TouchGFX.
-//     * Đọc lại enabled/speed/mode trước khi SetData để tránh ghi đè lựa chọn UI.
-//     */
-//    data.radar_enabled = RadarUiBridge_GetRadarEnabled();
-//    data.speed_mode    = RadarUiBridge_GetSpeedMode();
-//    data.scan_mode_deg = RadarUiBridge_GetScanMode();
-//
-//    data.angle_deg      = (uint16_t)g_angle;
-//    data.distance_cm    = distance_cm;
-//    data.distance_valid = distance_valid;
-//
-//    data.object_detected = detected;
-//    data.near_warning    = near_warning;
-//
-//    if (near_warning)
-//    {
-//        data.radar_status = RADAR_STATUS_ALERT;
-//    }
-//    else if (detected)
-//    {
-//        data.radar_status = RADAR_STATUS_DETECT;
-//    }
-//    else
-//    {
-//        data.radar_status = RADAR_STATUS_SCAN;
-//    }
-//
-//    data.buzzer_on = near_warning ? 1U : 0U;
-//    data.led3_on   = g_scan_led_state ? 1U : 0U;
-//    data.led4_on   = (detected || near_warning) ? 1U : 0U;
-//
-//    data.oled_connected = 0;
-//
-//    RadarUiBridge_SetData(&data);
-//
-//    /*
-//     * 10. Debug UART.
-//     */
-//    static uint32_t debug_enabled_last_tick = 0;
-//    uint32_t debug_enabled_now = HAL_GetTick();
-//
-//    if ((debug_enabled_now - debug_enabled_last_tick) >= 500U)
-//    {
-//        debug_enabled_last_tick = debug_enabled_now;
-//
-//        RadarDebug_Printf(
-//            "RUN en=%u angle=%u uiDir=%d phyDir=%d move=%ums valid=%u dist=%u echo=%uus pulse=%u\r\n",
-//            (unsigned int)data.radar_enabled,
-//            (unsigned int)data.angle_deg,
-//            (int)g_direction,
-//            (int)physical_direction,
-//            (unsigned int)move_ms,
-//            (unsigned int)distance_valid,
-//            (unsigned int)distance_cm,
-//            (unsigned int)HCSR04_GetLastEchoUs(),
-//            (unsigned int)Servo_GetLastPulseUs()
-//        );
-//
-//        RadarDebug_Printf(
-//            "HCSR04 st=%u start=%u rise=%u fall=%u tout=%u echo=%uus trig=%u echoPin=%u\r\n",
-//            (unsigned int)HCSR04_GetState(),
-//            (unsigned int)HCSR04_GetStartCount(),
-//            (unsigned int)HCSR04_GetRisingCount(),
-//            (unsigned int)HCSR04_GetFallingCount(),
-//            (unsigned int)HCSR04_GetTimeoutCount(),
-//            (unsigned int)HCSR04_GetLastEchoUs(),
-//            (unsigned int)HCSR04_DebugGetPA2HighRead(),
-//            (unsigned int)HCSR04_DebugGetPA5HighRead()
-//        );
-//
-//        RadarDebug_Printf(
-//            "    detect=%u near=%u status=%u obj=%u lastDist=%u lastAng=%u\r\n",
-//            (unsigned int)data.object_detected,
-//            (unsigned int)data.near_warning,
-//            (unsigned int)data.radar_status,
-//            (unsigned int)data.object_count,
-//            (unsigned int)data.last_object_distance_cm,
-//            (unsigned int)data.last_object_angle_deg
-//        );
-//    }
-//
-//    /*
-//     * 11. Delay nhỏ để tránh loop quá dày.
-//     */
-//    vTaskDelay(pdMS_TO_TICKS(RADAR_LOOP_IDLE_MS));
-//}
-
 void RadarApp_TaskLoop(void)
 {
     RadarUiData_t data;
@@ -583,6 +357,10 @@ void RadarApp_TaskLoop(void)
     uint8_t speed_mode;
     uint8_t scan_mode;
 
+    uint16_t raw_distance_cm = 0U;
+    uint8_t raw_valid = 0U;
+    uint32_t raw_echo_us = 0U;
+
     uint16_t distance_cm = 0U;
     uint8_t distance_valid = 0U;
 
@@ -590,6 +368,20 @@ void RadarApp_TaskLoop(void)
     uint8_t near_warning = 0U;
 
     uint32_t step_delay_ms;
+
+    static uint32_t last_debug_ms = 0U;
+
+    static uint32_t prev_start = 0U;
+    static uint32_t prev_rise = 0U;
+    static uint32_t prev_fall = 0U;
+    static uint32_t prev_tout = 0U;
+
+    uint32_t now_ms;
+
+    uint32_t start_count;
+    uint32_t rise_count;
+    uint32_t fall_count;
+    uint32_t tout_count;
 
     RadarUiBridge_GetData(&data);
 
@@ -629,9 +421,19 @@ void RadarApp_TaskLoop(void)
         break;
     }
 
+    /*
+     * Chờ servo tới góc rồi mới đo.
+     */
     vTaskDelay(pdMS_TO_TICKS(step_delay_ms));
 
-    distance_valid = RadarApp_MeasureDistance(&distance_cm);
+    /*
+     * Đo RAW. Không filter. Không giữ số cũ.
+     */
+    raw_valid = RadarApp_MeasureDistance(&raw_distance_cm);
+    raw_echo_us = HCSR04_GetLastEchoUs();
+
+    distance_valid = raw_valid;
+    distance_cm = raw_valid ? raw_distance_cm : 0U;
 
     if (distance_valid &&
         distance_cm >= RADAR_MIN_DISTANCE_CM &&
@@ -694,18 +496,57 @@ void RadarApp_TaskLoop(void)
 
     RadarUiBridge_SetData(&data);
 
-    RadarDebug_Printf(
-        "RADAR angle=%u valid=%u dist=%u detect=%u near=%u echo=%uus pulse=%u\r\n",
-        (unsigned int)data.angle_deg,
-        (unsigned int)data.distance_valid,
-        (unsigned int)data.distance_cm,
-        (unsigned int)data.object_detected,
-        (unsigned int)data.near_warning,
-        (unsigned int)HCSR04_GetLastEchoUs(),
-        (unsigned int)Servo_GetLastPulseUs()
-    );
+    now_ms = HAL_GetTick();
+
+    if ((now_ms - last_debug_ms) >= 300U)
+    {
+        last_debug_ms = now_ms;
+
+        start_count = HCSR04_GetStartCount();
+        rise_count = HCSR04_GetRisingCount();
+        fall_count = HCSR04_GetFallingCount();
+        tout_count = HCSR04_GetTimeoutCount();
+
+        RadarDebug_Printf(
+            "SR04_RAW angle=%u rawValid=%u rawDist=%u echoUs=%lu st=%u\r\n",
+            (unsigned int)g_angle,
+            (unsigned int)raw_valid,
+            (unsigned int)raw_distance_cm,
+            (unsigned long)raw_echo_us,
+            (unsigned int)HCSR04_GetState()
+        );
+
+        RadarDebug_Printf(
+            "SR04_CNT dS=%lu dR=%lu dF=%lu dT=%lu | S=%lu R=%lu F=%lu T=%lu trig=%lu echoAtTrig=%lu\r\n",
+            (unsigned long)(start_count - prev_start),
+            (unsigned long)(rise_count - prev_rise),
+            (unsigned long)(fall_count - prev_fall),
+            (unsigned long)(tout_count - prev_tout),
+            (unsigned long)start_count,
+            (unsigned long)rise_count,
+            (unsigned long)fall_count,
+            (unsigned long)tout_count,
+            (unsigned long)HCSR04_DebugGetPA2HighRead(),
+            (unsigned long)HCSR04_DebugGetPA5HighRead()
+        );
+
+        RadarDebug_Printf(
+            "UI angle=%u valid=%u dist=%u detect=%u near=%u pulse=%u\r\n",
+            (unsigned int)data.angle_deg,
+            (unsigned int)data.distance_valid,
+            (unsigned int)data.distance_cm,
+            (unsigned int)data.object_detected,
+            (unsigned int)data.near_warning,
+            (unsigned int)Servo_GetLastPulseUs()
+        );
+
+        prev_start = start_count;
+        prev_rise = rise_count;
+        prev_fall = fall_count;
+        prev_tout = tout_count;
+    }
 
     RadarApp_AdvanceAngle(scan_mode, speed_mode);
 
-    vTaskDelay(pdMS_TO_TICKS(5));
+    vTaskDelay(pdMS_TO_TICKS(20));
 }

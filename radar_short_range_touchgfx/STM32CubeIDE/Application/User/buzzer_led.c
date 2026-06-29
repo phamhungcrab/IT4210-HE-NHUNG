@@ -37,19 +37,35 @@ void LedAlert_Set(uint8_t on)
 
 void Alert_Update(uint8_t detected, uint8_t near_warning)
 {
+    static uint32_t last_toggle_ms = 0U;
+    static uint8_t buzzer_state = 0U;
+
+    uint32_t now = HAL_GetTick();
+
     if (near_warning)
     {
         LedAlert_Set(1);
-        Buzzer_Set(1);
+
+        if ((now - last_toggle_ms) >= 120U)
+        {
+            last_toggle_ms = now;
+            buzzer_state = !buzzer_state;
+        }
+
+        Buzzer_Set(buzzer_state);
     }
     else if (detected)
     {
         LedAlert_Set(1);
         Buzzer_Set(0);
+        buzzer_state = 0U;
+        last_toggle_ms = now;
     }
     else
     {
         LedAlert_Set(0);
         Buzzer_Set(0);
+        buzzer_state = 0U;
+        last_toggle_ms = now;
     }
 }
