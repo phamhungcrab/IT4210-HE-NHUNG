@@ -187,13 +187,22 @@ Board STM32F429I-DISC1 có LCD và SDRAM tích hợp, đây là lợi thế cho 
 
 ### 4.1. Sơ đồ khối hệ thống
 
-`[Chèn ảnh: sơ đồ khối hệ thống]`
+<p align="center">
+  <img src="docs/images/a.png" width="700" alt="Sơ đồ khối hệ thống">
+  <br>
+  <em>Hình 1. Sơ đồ khối hệ thống.</em>
+</p>
+
 
 Sơ đồ khối cần thể hiện STM32F429I-DISC1 là trung tâm. HC-SR04 gửi tín hiệu echo về STM32, servo nhận PWM để thay đổi góc quét, LCD TouchGFX hiển thị dữ liệu, LED/buzzer phản hồi trạng thái cảnh báo, OLED SH1106 kết nối qua I2C3 nếu phần hiển thị phụ được hoàn thiện.
 
 ### 4.2. Sơ đồ schematic
 
-`[Chèn ảnh: sơ đồ schematic]`
+<p align="center">
+  <img src="docs/images/b.png" width="700" alt="Sơ đồ schematic">
+  <br>
+  <em>Hình 2. Sơ đồ schematic.</em>
+</p>
 
 Sơ đồ schematic cần thể hiện rõ nguồn cấp, GND chung, đường tín hiệu trigger/echo của HC-SR04, đường PWM servo, đường I2C OLED, LED/buzzer và UART debug. Nếu dùng mạch chia áp hoặc level shifter cho chân echo, cần vẽ trực tiếp vào schematic.
 
