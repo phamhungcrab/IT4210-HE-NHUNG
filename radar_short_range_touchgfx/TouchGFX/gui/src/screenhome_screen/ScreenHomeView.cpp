@@ -24,3 +24,10 @@ void ScreenHomeView::tearDownScreen()
 {
     ScreenHomeViewBase::tearDownScreen();
 }
+
+
+void ScreenHomeView::onScreenStart()
+{
+	RadarApp_Stop();
+}
+

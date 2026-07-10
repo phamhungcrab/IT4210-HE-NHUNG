@@ -10,8 +10,10 @@ extern "C" {
 
 void RadarUiBridge_Init(void);
 
-void RadarUiBridge_SetData(const RadarUiData_t *data);
+void RadarUiBridge_SetData(const RadarCoreData_t *data);
 void RadarUiBridge_GetData(RadarUiData_t *data);
+
+uint8_t RadarUiBridge_IsControlConfigChange(RadarControlConfig_t *ctrl_config);
 
 void RadarUiBridge_SetRadarEnabled(uint8_t enabled);
 uint8_t RadarUiBridge_GetRadarEnabled(void);

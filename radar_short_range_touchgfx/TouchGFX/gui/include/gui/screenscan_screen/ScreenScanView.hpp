@@ -13,6 +13,8 @@ public:
     virtual void setupScreen();
     virtual void tearDownScreen();
 
+    virtual void onScreenStart();
+
     virtual void handleTickEvent();
 
 protected:

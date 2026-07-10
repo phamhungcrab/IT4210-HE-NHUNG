@@ -109,16 +109,16 @@ void ScreenInfoView::updateInfoText()
     Unicode::snprintf(scanModeBuffer,
                       INFO_BUF_SIZE,
                       "%u deg",
-                      data.scan_mode_deg);
+                      data.control.scan_mode_deg);
 
     /*
      * SPEED: SLOW / MED / FAST
      */
-    if (data.speed_mode == RADAR_SPEED_SLOW)
+    if (data.control.speed_mode == RADAR_SPEED_SLOW)
     {
         Unicode::strncpy(speedModeBuffer, "SLOW", INFO_BUF_SIZE);
     }
-    else if (data.speed_mode == RADAR_SPEED_FAST)
+    else if (data.control.speed_mode == RADAR_SPEED_FAST)
     {
         Unicode::strncpy(speedModeBuffer, "FAST", INFO_BUF_SIZE);
     }
@@ -133,7 +133,7 @@ void ScreenInfoView::updateInfoText()
      *
      * Nếu chưa từng phát hiện object thì hiện "--- cm".
      */
-    if (data.last_object_distance_cm == 0)
+    if (data.core_data.last_object_distance_cm == 0)
     {
         Unicode::strncpy(minRangeBuffer, "--- cm", INFO_BUF_SIZE);
     }
@@ -142,7 +142,7 @@ void ScreenInfoView::updateInfoText()
         Unicode::snprintf(minRangeBuffer,
                           INFO_BUF_SIZE,
                           "%u cm",
-                          data.last_object_distance_cm);
+                          data.core_data.last_object_distance_cm);
     }
 
     /*
@@ -151,7 +151,7 @@ void ScreenInfoView::updateInfoText()
      *
      * Nếu chưa từng phát hiện object thì hiện "--- deg".
      */
-    if (data.last_object_distance_cm == 0)
+    if (data.core_data.last_object_distance_cm == 0)
     {
         Unicode::strncpy(lastAngleBuffer, "--- deg", INFO_BUF_SIZE);
     }
@@ -160,7 +160,7 @@ void ScreenInfoView::updateInfoText()
         Unicode::snprintf(lastAngleBuffer,
                           INFO_BUF_SIZE,
                           "%u deg",
-                          data.last_object_angle_deg);
+                          data.core_data.last_object_angle_deg);
     }
 
     /*
@@ -171,7 +171,7 @@ void ScreenInfoView::updateInfoText()
     Unicode::snprintf(objectCountBuffer,
                       INFO_BUF_SIZE,
                       "%u",
-                      data.object_count);
+                      data.core_data.object_count);
 
     txtScanLabel.invalidate();
     txtSpeedLabel.invalidate();

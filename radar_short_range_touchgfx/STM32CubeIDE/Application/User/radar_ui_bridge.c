@@ -8,6 +8,7 @@
 
 #include "radar_ui_bridge.h"
 #include "radar_config.h"
+#include "cmsis_os.h"
 #include "main.h"
 /*
  * Bridge này là vùng dữ liệu chung:
@@ -17,7 +18,11 @@
  * Dùng critical section ngắn để tránh đang copy struct thì bị ngắt/task khác sửa.
  */
 
-static RadarUiData_t g_radar_ui_data;
+extern osMessageQueueId_t RadarMessageHandle;
+extern osMessageQueueId_t RadarControlQueueHandle;
+
+static RadarCoreData_t     g_radar_core;
+static RadarControlConfig_t g_radar_control;
 
 static void RadarUiBridge_EnterCritical(void)
 {
@@ -29,98 +34,114 @@ static void RadarUiBridge_ExitCritical(void)
     __enable_irq();
 }
 
-void RadarUiBridge_Init(void)
+static void RadarUiBridge_PushControlUpdate(void)
 {
-    RadarUiData_t init_data;
+    if (RadarControlQueueHandle != NULL)
+    {
+        RadarControlConfig_t ctrl_snapshot;
 
-    init_data.radar_enabled     = 0;
-    init_data.angle_deg         = SERVO_CENTER_ANGLE_DEG;
-    init_data.distance_cm       = 0;
-    init_data.distance_valid    = 0;
+        RadarUiBridge_EnterCritical();
+        ctrl_snapshot = g_radar_control;
+        RadarUiBridge_ExitCritical();
 
-    init_data.object_detected   = 0;
-    init_data.near_warning      = 0;
-    init_data.radar_status      = RADAR_STATUS_SCAN;
-
-    init_data.scan_mode_deg     = RADAR_SCAN_MODE_180_DEG;
-    init_data.speed_mode        = RADAR_SPEED_MED;
-
-    init_data.object_count            = 0;
-    init_data.last_object_distance_cm = 0;
-    init_data.last_object_angle_deg   = 0;
-
-    init_data.buzzer_on         = 0;
-    init_data.led3_on           = 0;
-    init_data.led4_on           = 0;
-    init_data.oled_connected    = 0;
-
-    RadarUiBridge_SetData(&init_data);
+        osMessageQueuePut(RadarControlQueueHandle, &ctrl_snapshot, 0U, 0U);
+    }
 }
 
-void RadarUiBridge_SetData(const RadarUiData_t *data)
+void RadarUiBridge_Init(void)
 {
-    if (data == 0)
+    RadarUiBridge_EnterCritical();
+
+    g_radar_control.radar_enabled   = 0;
+    g_radar_control.scan_mode_deg   = RADAR_SCAN_MODE_180_DEG;
+    g_radar_control.speed_mode      = RADAR_SPEED_MED;
+
+    g_radar_core.angle_deg       = SERVO_CENTER_ANGLE_DEG;
+    g_radar_core.distance_cm     = 0;
+    g_radar_core.distance_valid  = 0;
+    g_radar_core.object_detected = 0;
+    g_radar_core.near_warning    = 0;
+    g_radar_core.radar_status    = RADAR_STATUS_SCAN;
+    g_radar_core.object_count    = 0;
+    g_radar_core.last_object_distance_cm = 0;
+    g_radar_core.last_object_angle_deg   = 0;
+    g_radar_core.buzzer_on       = 0;
+    g_radar_core.led3_on         = 0;
+    g_radar_core.led4_on         = 0;
+    g_radar_core.oled_connected  = 0;
+
+    RadarUiBridge_ExitCritical();
+}
+
+void RadarUiBridge_SetData(const RadarCoreData_t *data)
+{
+    if (data == NULL || RadarMessageHandle == NULL)
     {
         return;
     }
 
-    __disable_irq();
-
-    /*
-     * Giữ lại các biến điều khiển do UI/Button set.
-     *
-     * Lý do:
-     * RadarApp_TaskLoop cập nhật sensor data liên tục.
-     * ScreenScan/ScreenHome/Settings cũng cập nhật enabled/speed/mode.
-     *
-     * Nếu SetData ghi đè toàn bộ struct, có thể xảy ra lỗi:
-     * - UI vừa gọi RadarApp_Start() set enabled = 1
-     * - Task đang giữ bản data cũ enabled = 0
-     * - Task SetData lại làm enabled tụt về 0
-     *
-     * Vì vậy SetData chỉ nên update dữ liệu đo/hiển thị,
-     * còn 3 biến control phải giữ theo state hiện tại.
-     */
-    uint8_t keep_enabled = g_radar_ui_data.radar_enabled;
-    uint8_t keep_speed   = g_radar_ui_data.speed_mode;
-    uint8_t keep_mode    = g_radar_ui_data.scan_mode_deg;
-
-    g_radar_ui_data = *data;
-
-    g_radar_ui_data.radar_enabled = keep_enabled;
-    g_radar_ui_data.speed_mode    = keep_speed;
-    g_radar_ui_data.scan_mode_deg = keep_mode;
-
-    __enable_irq();
+    osMessageQueuePut(RadarMessageHandle, data, 0U, 0U);
 }
 
 void RadarUiBridge_GetData(RadarUiData_t *data)
 {
-    if (data == 0)
+    if (data == NULL)
     {
         return;
     }
 
+    RadarCoreData_t received_data;
+
+    if (RadarMessageHandle != NULL && osMessageQueueGet(RadarMessageHandle, &received_data, NULL, 0U) == osOK)
+    {
+        RadarUiBridge_EnterCritical();
+        g_radar_core = received_data;
+        RadarUiBridge_ExitCritical();
+    }
+
     RadarUiBridge_EnterCritical();
-    *data = g_radar_ui_data;
+    data->core_data = g_radar_core;
+    data->control   = g_radar_control;
     RadarUiBridge_ExitCritical();
 }
+
+
+uint8_t RadarUiBridge_IsControlConfigChange(RadarControlConfig_t *ctrl_config) {
+    static RadarControlConfig_t incoming_ctrl;
+
+    if (ctrl_config == NULL)
+    {
+        return -1;
+    }
+
+    if (RadarControlQueueHandle != NULL)
+    {
+        if (osMessageQueueGet(RadarControlQueueHandle, &incoming_ctrl, NULL, 0U) == osOK)
+        {
+            *ctrl_config = incoming_ctrl;
+            return 1;
+        }
+    }
+
+    return 0;
+}
+
 
 void RadarUiBridge_SetRadarEnabled(uint8_t enabled)
 {
     RadarUiBridge_EnterCritical();
-    g_radar_ui_data.radar_enabled = enabled ? 1U : 0U;
+    g_radar_control.radar_enabled = enabled ? 1U : 0U;
     RadarUiBridge_ExitCritical();
+
+    RadarUiBridge_PushControlUpdate();
 }
 
 uint8_t RadarUiBridge_GetRadarEnabled(void)
 {
     uint8_t enabled;
-
     RadarUiBridge_EnterCritical();
-    enabled = g_radar_ui_data.radar_enabled;
+    enabled = g_radar_control.radar_enabled;
     RadarUiBridge_ExitCritical();
-
     return enabled;
 }
 
@@ -130,20 +151,19 @@ void RadarUiBridge_SetSpeedMode(uint8_t speed_mode)
     {
         speed_mode = RADAR_SPEED_MED;
     }
-
     RadarUiBridge_EnterCritical();
-    g_radar_ui_data.speed_mode = speed_mode;
+    g_radar_control.speed_mode = speed_mode;
     RadarUiBridge_ExitCritical();
+
+    RadarUiBridge_PushControlUpdate();
 }
 
 uint8_t RadarUiBridge_GetSpeedMode(void)
 {
     uint8_t mode;
-
     RadarUiBridge_EnterCritical();
-    mode = g_radar_ui_data.speed_mode;
+    mode = g_radar_control.speed_mode;
     RadarUiBridge_ExitCritical();
-
     return mode;
 }
 
@@ -154,39 +174,38 @@ void RadarUiBridge_SetScanMode(uint8_t scan_mode_deg)
     {
         scan_mode_deg = RADAR_SCAN_MODE_180_DEG;
     }
-
     RadarUiBridge_EnterCritical();
-    g_radar_ui_data.scan_mode_deg = scan_mode_deg;
+    g_radar_control.scan_mode_deg = scan_mode_deg;
     RadarUiBridge_ExitCritical();
+
+    RadarUiBridge_PushControlUpdate();
 }
 
 uint8_t RadarUiBridge_GetScanMode(void)
 {
     uint8_t mode;
-
     RadarUiBridge_EnterCritical();
-    mode = g_radar_ui_data.scan_mode_deg;
+    mode = g_radar_control.scan_mode_deg;
     RadarUiBridge_ExitCritical();
-
     return mode;
 }
 
 void RadarUiBridge_NextSpeedMode(void)
 {
     RadarUiBridge_EnterCritical();
-
-    if (g_radar_ui_data.speed_mode == RADAR_SPEED_SLOW)
+    if (g_radar_control.speed_mode == RADAR_SPEED_SLOW)
     {
-        g_radar_ui_data.speed_mode = RADAR_SPEED_MED;
+        g_radar_control.speed_mode = RADAR_SPEED_MED;
     }
-    else if (g_radar_ui_data.speed_mode == RADAR_SPEED_MED)
+    else if (g_radar_control.speed_mode == RADAR_SPEED_MED)
     {
-        g_radar_ui_data.speed_mode = RADAR_SPEED_FAST;
+        g_radar_control.speed_mode = RADAR_SPEED_FAST;
     }
     else
     {
-        g_radar_ui_data.speed_mode = RADAR_SPEED_SLOW;
+        g_radar_control.speed_mode = RADAR_SPEED_SLOW;
     }
-
     RadarUiBridge_ExitCritical();
+
+    RadarUiBridge_PushControlUpdate();
 }

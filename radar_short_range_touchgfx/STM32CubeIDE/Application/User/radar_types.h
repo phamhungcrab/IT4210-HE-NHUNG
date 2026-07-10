@@ -24,8 +24,6 @@ typedef enum
 
 typedef struct
 {
-    uint8_t  radar_enabled;
-
     uint16_t angle_deg;
     uint16_t distance_cm;
     uint8_t  distance_valid;
@@ -34,17 +32,7 @@ typedef struct
     uint8_t  near_warning;
     uint8_t  radar_status;
 
-    uint8_t  scan_mode_deg;
-    uint8_t  speed_mode;
-
     uint16_t object_count;
-
-    /*
-     * Last detected object information:
-     * - object_count chỉ tăng khi có object mới.
-     * - Nhưng last_object_distance_cm và last_object_angle_deg
-     *   sẽ update mỗi lần radar đang phát hiện được vật.
-     */
     uint16_t last_object_distance_cm;
     uint16_t last_object_angle_deg;
 
@@ -52,8 +40,20 @@ typedef struct
     uint8_t  led3_on;
     uint8_t  led4_on;
     uint8_t  oled_connected;
-} RadarUiData_t;
+} RadarCoreData_t;
 
+typedef struct
+{
+    uint8_t  radar_enabled;
+    uint8_t  scan_mode_deg;
+    uint8_t  speed_mode;
+} RadarControlConfig_t;
+
+typedef struct
+{
+    RadarCoreData_t     core_data;
+    RadarControlConfig_t control;
+} RadarUiData_t;
 #ifdef __cplusplus
 }
 #endif

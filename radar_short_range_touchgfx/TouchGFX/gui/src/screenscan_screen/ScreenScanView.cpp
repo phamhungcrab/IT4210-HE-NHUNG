@@ -34,9 +34,9 @@ void ScreenScanView::setupScreen()
     RadarUiData_t dbg;
     RadarUiBridge_GetData(&dbg);
     RadarDebug_Printf("[UI] After Start: en=%u speed=%u mode=%u\r\n",
-                      dbg.radar_enabled,
-                      dbg.speed_mode,
-                      dbg.scan_mode_deg);
+                      dbg.control.radar_enabled,
+                      dbg.control.speed_mode,
+                      dbg.control.scan_mode_deg);
 
     txtrSweepGreen.setVisible(true);
     txtrSweepRed.setVisible(false);
@@ -47,12 +47,11 @@ void ScreenScanView::setupScreen()
 
 void ScreenScanView::tearDownScreen()
 {
-    /*
-     * Không stop radar ở đây.
-     * Vì từ Scan có thể chuyển sang Settings/Info, radar vẫn nên chạy.
-     * Muốn stop thì về Home, ScreenHomeView sẽ gọi RadarApp_Stop().
-     */
     ScreenScanViewBase::tearDownScreen();
+}
+
+void ScreenScanView::onScreenStart() {
+	RadarApp_Start();
 }
 
 void ScreenScanView::handleTickEvent()
@@ -82,18 +81,18 @@ void ScreenScanView::updateRadarUi()
     Unicode::snprintf(txtAngleValueBuffer,
                       TXTANGLEVALUE_SIZE,
                       "%03u",
-                      data.angle_deg);
+                      data.core_data.angle_deg);
     txtAngleValue.invalidate();
 
     /*
      * Update distance text.
      */
-    if (data.distance_valid)
+    if (data.core_data.distance_valid)
     {
         Unicode::snprintf(txtDistanceValueBuffer,
                           TXTDISTANCEVALUE_SIZE,
                           "%03u cm",
-                          data.distance_cm);
+                          data.core_data.distance_cm);
     }
     else
     {
@@ -106,13 +105,13 @@ void ScreenScanView::updateRadarUi()
     /*
      * Update status text.
      */
-    if (data.radar_status == RADAR_STATUS_ALERT)
+    if (data.core_data.radar_status == RADAR_STATUS_ALERT)
     {
         Unicode::strncpy(txtStatusValueBuffer,
                          "ALERT",
                          TXTSTATUSVALUE_SIZE);
     }
-    else if (data.radar_status == RADAR_STATUS_DETECT)
+    else if (data.core_data.radar_status == RADAR_STATUS_DETECT)
     {
         Unicode::strncpy(txtStatusValueBuffer,
                          "DETECT",
@@ -131,7 +130,7 @@ void ScreenScanView::updateRadarUi()
      * - xanh khi scan bình thường
      * - đỏ khi detect hoặc alert
      */
-    if (data.object_detected || data.near_warning)
+    if (data.core_data.object_detected || data.core_data.near_warning)
     {
         txtrSweepGreen.setVisible(false);
         txtrSweepRed.setVisible(true);
@@ -148,7 +147,7 @@ void ScreenScanView::updateRadarUi()
      *
      * TouchGFX TextureMapper thường dùng radian cho setAngles.
      */
-    float zAngle = ((float)data.angle_deg - 90.0f) * ((float)M_PI / 180.0f);
+    float zAngle = ((float)data.core_data.angle_deg - 90.0f) * ((float)M_PI / 180.0f);
 
     txtrSweepGreen.setAngles(0.0f, 0.0f, zAngle);
     txtrSweepRed.setAngles(0.0f, 0.0f, zAngle);
@@ -159,13 +158,13 @@ void ScreenScanView::updateRadarUi()
     /*
      * Target chỉ hiện khi có vật.
      */
-    if (data.object_detected && data.distance_valid)
+    if (data.core_data.object_detected && data.core_data.distance_valid)
     {
-        updateTarget(data.angle_deg, data.distance_cm, 1);
+        updateTarget(data.core_data.angle_deg, data.core_data.distance_cm, 1);
     }
     else
     {
-        updateTarget(data.angle_deg, data.distance_cm, 0);
+        updateTarget(data.core_data.angle_deg, data.core_data.distance_cm, 0);
     }
 }
 

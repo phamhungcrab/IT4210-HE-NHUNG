@@ -26,6 +26,7 @@
 /* USER CODE BEGIN Includes */
 #include "Components/ili9341/ili9341.h"
 #include "hcsr04.h"
+#include "radar_types.h"
 #include "radar_app.h"
 #include "radar_debug.h"
 /* USER CODE END Includes */
@@ -105,6 +106,16 @@ const osThreadAttr_t radarTask_attributes = {
   .name = "radarTask",
   .stack_size = 1024 * 4,
   .priority = (osPriority_t) osPriorityLow,
+};
+
+osMessageQueueId_t RadarMessageHandle;
+const osMessageQueueAttr_t RadarQueue_attributes = {
+  .name = "RadarQueue"
+};
+
+osMessageQueueId_t RadarControlQueueHandle = NULL;
+const osMessageQueueAttr_t RadarControlQueue_attributes = {
+  .name = "RadarCtrlQueue"
 };
 /* USER CODE END PV */
 
@@ -238,6 +249,9 @@ int main(void)
 
   /* USER CODE BEGIN RTOS_THREADS */
   radarTaskHandle = osThreadNew(StartRadarTask, NULL, &radarTask_attributes);
+  RadarMessageHandle = osMessageQueueNew(10, sizeof(RadarCoreData_t), &RadarQueue_attributes);
+  RadarControlQueueHandle = osMessageQueueNew(3, sizeof(RadarControlConfig_t), &RadarControlQueue_attributes);
+
   /* USER CODE END RTOS_THREADS */
 
   /* USER CODE BEGIN RTOS_EVENTS */
@@ -896,8 +910,8 @@ static void StartRadarTask(void *argument)
    * Sau khi debug xong có thể bỏ dòng RadarApp_Start()
    * để quay lại điều khiển bằng UI.
    */
-  RadarApp_Start();
-  RadarDebug_Printf("[RADAR_TASK] Init done -> FORCE RadarApp_Start\r\n");
+//  RadarApp_Start();
+//  RadarDebug_Printf("[RADAR_TASK] Init done -> FORCE RadarApp_Start\r\n");
 
   for (;;)
   {

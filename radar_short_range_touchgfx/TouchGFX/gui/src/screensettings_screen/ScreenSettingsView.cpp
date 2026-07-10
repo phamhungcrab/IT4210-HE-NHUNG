@@ -121,11 +121,11 @@ void ScreenSettingsView::updateConfigText()
     /*
      * Wildcard 1: speedMode
      */
-    if (data.speed_mode == RADAR_SPEED_SLOW)
+    if (data.control.speed_mode == RADAR_SPEED_SLOW)
     {
         Unicode::strncpy(speedModeBuffer, "SLOW", SETTING_SPEED_BUF_SIZE);
     }
-    else if (data.speed_mode == RADAR_SPEED_FAST)
+    else if (data.control.speed_mode == RADAR_SPEED_FAST)
     {
         Unicode::strncpy(speedModeBuffer, "FAST", SETTING_SPEED_BUF_SIZE);
     }
@@ -140,7 +140,7 @@ void ScreenSettingsView::updateConfigText()
     Unicode::snprintf(scanModeBuffer,
                       SETTING_SCAN_BUF_SIZE,
                       "%u deg",
-                      data.scan_mode_deg);
+                      data.control.scan_mode_deg);
 
     txtCurrentConfig.invalidate();
 }
