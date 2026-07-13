@@ -42,7 +42,7 @@ Project chính nằm trong thư mục [`radar_short_range_touchgfx`](./radar_sho
 
 ### 1.2. Mục tiêu
 
-Mục tiêu của đề tài là thiết kế và triển khai một hệ thống nhúng có khả năng:
+Mục tiêu của đề tài là thiết kế và triển khai một sản phẩm hệ thống nhúng có khả năng:
 
 - Quét khu vực phía trước cảm biến theo một dải góc xác định.
 - Đo khoảng cách vật cản bằng cảm biến siêu âm HC-SR04.
@@ -73,17 +73,18 @@ Luồng xử lý tổng quát:
 
 ### 1.4. Chức năng chính
 
-| Nhóm chức năng | Mô tả |
-| --- | --- |
-| Đo khoảng cách | Đo khoảng cách bằng HC-SR04, xử lý echo bằng EXTI và DWT cycle counter |
-| Quét góc | Điều khiển servo MG90S bằng PWM TIM3_CH1 trên PB4 |
-| Hiển thị LCD | TouchGFX hiển thị góc, khoảng cách, trạng thái và vị trí mục tiêu |
-| Chế độ quét | Hỗ trợ chế độ quét 90 độ và 180 độ |
-| Tốc độ quét | Hỗ trợ các mức `SLOW`, `MED`, `FAST` |
-| Cảnh báo | LED và buzzer phản hồi theo trạng thái phát hiện vật cản |
+| Nhóm chức năng      | Mô tả                                                                        |
+| ------------------- | ---------------------------------------------------------------------------- |
+| Đo khoảng cách      | Đo khoảng cách bằng HC-SR04, xử lý echo bằng EXTI và DWT cycle counter.      |
+| Quét góc            | Điều khiển servo MG90S bằng PWM TIM3_CH1 trên PB4.                           |
+| Hiển thị LCD        | Giao diện TouchGFX hiển thị góc, khoảng cách, trạng thái và vị trí mục tiêu. |
+| Chế độ quét         | Hỗ trợ chế độ quét 90 độ và 180 độ theo cấu hình trong `radar_config.h`.     |
+| Tốc độ quét         | Hỗ trợ các mức `SLOW`, `MED`, `FAST`.                                        |
+| Cảnh báo            | LED/buzzer phản hồi theo trạng thái phát hiện vật cản và vật cản gần.        |
 | Nút USER | Bấm ngắn đổi tốc độ; giữ lâu đổi chế độ quét |
 | FreeRTOS queue | Truyền dữ liệu radar và cấu hình điều khiển giữa các task |
-| Debug UART | In trạng thái đo, echo, counter và thông tin hệ thống qua USART1 |
+| Điều khiển nút USER | Bấm ngắn đổi tốc độ; giữ lâu đổi chế độ quét.                                |
+| Debug UART          | In trạng thái đo, echo, counter và dữ liệu UI qua USART1.                    |
 
 ### 1.5. Cấu trúc project chính
 
@@ -109,12 +110,12 @@ IT4210-HE-NHUNG/
 
 ### 2.1. Thành viên nhóm
 
-| STT | MSSV | Họ và tên | Email |
-| ---: | --- | --- | --- |
-| 1 | 20235318 | Nguyễn Minh Giang | giang.nm235318@sis.hust.edu.vn |
-| 2 | 20235333 | Bùi Trung Hoàng | hoang.bt235333@sis.hust.edu.vn |
-| 3 | 20235342 | Phạm Ngọc Hưng | hung.pn235342@sis.hust.edu.vn |
-| 4 | 20235421 | Khương Anh Tài | tai.ka235421@sis.hust.edu.vn |
+| STT | MSSV     | Họ và tên         | Email                          |
+| --: | -------- | ----------------- | ------------------------------ |
+|   1 | 20235318 | Nguyễn Minh Giang | giang.nm235318@sis.hust.edu.vn |
+|   2 | 20235333 | Bùi Trung Hoàng   | hoang.bt235333@sis.hust.edu.vn |
+|   3 | 20235342 | Phạm Ngọc Hưng    | hung.pn235342@sis.hust.edu.vn  |
+|   4 | 20235421 | Khương Anh Tài    | tai.ka235421@sis.hust.edu.vn   |
 
 ### 2.2. Phân công công việc
 
@@ -123,12 +124,7 @@ IT4210-HE-NHUNG/
 | Nguyễn Minh Giang | TODO: Nhóm bổ sung theo phân công thực tế | TODO |
 | Bùi Trung Hoàng | TODO: Nhóm bổ sung theo phân công thực tế | TODO |
 | **Phạm Ngọc Hưng** | **Thiết kế giao diện TouchGFX; xây dựng các màn Home, Scan, Settings, Info; tích hợp dữ liệu radar lên UI** | Phụ trách UI |
-| Khương Anh Tài | TODO: Nhóm bổ sung theo phân công thực tế | TODO |
-
-> [!IMPORTANT]
-> Nhóm cần điền đầy đủ phần việc của ba thành viên còn lại trước khi nộp báo cáo chính thức.
-
----
+| **Khương Anh Tài** | **Xây dựng mạch; tích hợp logic UI và refator đoạn code thừa** | Phần cứng & UI |
 
 ## 3. MÔI TRƯỜNG HOẠT ĐỘNG
 
@@ -516,6 +512,15 @@ Driver chính:
 
 Các hàm chính:
 
+| Tham số                  | Giá trị | Ý nghĩa               |
+| ------------------------ | ------: | --------------------- |
+| `SERVO_MIN_ANGLE_DEG`    |       0 | Góc nhỏ nhất          |
+| `SERVO_CENTER_ANGLE_DEG` |      90 | Góc giữa              |
+| `SERVO_MAX_ANGLE_DEG`    |     180 | Góc lớn nhất          |
+| `SERVO_MIN_PULSE_US`     |  550 us | Pulse ứng với góc nhỏ |
+| `SERVO_CENTER_PULSE_US`  | 1500 us | Pulse trung tâm       |
+| `SERVO_MAX_PULSE_US`     | 2450 us | Pulse ứng với góc lớn |
+
 - `Servo_Init()`
 - `Servo_SetPulseUs()`
 - `Servo_SetAngle()`
@@ -844,18 +849,110 @@ File:
 - [`hcsr04.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/hcsr04.h)
 - [`hcsr04.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/hcsr04.c)
 
-| Hàm | Chức năng | Ý nghĩa |
-| --- | --- | --- |
-| `HCSR04_Init()` | Khởi tạo driver và DWT | Đưa cảm biến về trạng thái ban đầu |
-| `HCSR04_StartMeasure()` | Phát trigger 10 us | Bắt đầu một lần đo |
-| `HCSR04_GPIO_EXTI_Callback()` | Bắt cạnh echo | Đo độ rộng xung không cần polling liên tục |
-| `HCSR04_ProcessTimeout()` | Kiểm tra timeout | Tránh hệ thống chờ vô hạn |
-| `HCSR04_GetDistanceCm()` | Đổi echo sang cm | Trả khoảng cách hợp lệ |
-| `HCSR04_GetLastEchoUs()` | Trả echo gần nhất | Phục vụ UART debug |
-| `HCSR04_GetStartCount()` | Trả số lần bắt đầu đo | Kiểm tra trigger |
-| `HCSR04_GetRisingCount()` | Trả số cạnh lên | Debug tín hiệu echo |
-| `HCSR04_GetFallingCount()` | Trả số cạnh xuống | Debug tín hiệu echo |
-| `HCSR04_GetTimeoutCount()` | Trả số lần timeout | Đánh giá độ ổn định |
+Driver HC-SR04 sử dụng state machine, tự định nghĩa các biến trạng thái để xử lý logic một cách tường minh và rành mạch
+
+```C
+/**
+ * @brief Các trạng thái hoạt động của driver HC-SR04.
+ *
+ * Enum HCSR04_State_t
+ *
+ * - IDLE         : Chưa thực hiện phép đo.
+ * - WAIT_RISING  : Đã phát Trigger, đang chờ cạnh lên của Echo.
+ * - WAIT_FALLING : Đã nhận cạnh lên, đang chờ cạnh xuống để kết thúc phép đo.
+ * - DONE         : Đã đo xong và có dữ liệu khoảng cách hợp lệ.
+ * - TIMEOUT      : Không nhận được Echo trong thời gian quy định.
+ * - ERROR        : Xuất hiện lỗi trong quá trình đo.
+ */
+```
+
+```C
+/**
+ * @brief Khởi tạo driver HC-SR04.
+ *
+ * Hàm bật bộ đếm chu kỳ DWT để đo thời gian có độ phân giải micro giây,
+ * khởi tạo các biến trạng thái nội bộ của driver và đưa chân TRIG về mức thấp.
+ * Đây là bước chuẩn bị trước khi radar bắt đầu thực hiện các phép đo khoảng cách.
+ *
+ * @param None.
+ * @return None.
+ */
+void HCSR04_Init(void);
+```
+
+```C
+/**
+ * @brief Bắt đầu một lần đo khoảng cách bằng HC-SR04.
+ *
+ * Hàm phát xung Trigger có độ rộng khoảng 10 us trên chân TRIG và chuyển
+ * trạng thái driver sang chờ tín hiệu Echo. Hàm chỉ khởi động quá trình đo,
+ * không chờ kết quả hoàn thành.
+ *
+ * @param None.
+ * @return None.
+ */
+void HCSR04_StartMeasure(void);
+```
+
+```C
+/**
+ * @brief Xử lý ngắt tín hiệu Echo của HC-SR04.
+ *
+ * Khi phát hiện cạnh lên của chân Echo, hàm lưu thời điểm bắt đầu.
+ * Khi phát hiện cạnh xuống, hàm lưu thời điểm kết thúc, tính độ rộng xung
+ * Echo theo micro giây và cập nhật trạng thái hoàn thành phép đo.
+ *
+ * @param GPIO_Pin: Chân GPIO phát sinh ngắt.
+ * @return None.
+ */
+void HCSR04_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
+```
+
+```C
+/**
+ * @brief Kiểm tra timeout của quá trình đo.
+ *
+ * Hàm kiểm tra xem thời gian chờ Echo có vượt quá ngưỡng cho phép hay không.
+ * Nếu quá thời gian, trạng thái driver được chuyển sang TIMEOUT nhằm tránh
+ * chương trình bị chờ vô hạn khi cảm biến không nhận được Echo.
+ *
+ * @param None.
+ * @return None.
+ */
+void HCSR04_ProcessTimeout(void);
+```
+
+```C
+/**
+ * @brief Lấy khoảng cách đo được theo đơn vị centimet.
+ *
+ * Hàm chuyển đổi độ rộng xung Echo sang khoảng cách bằng công thức:
+ *
+ *      distance = echo_us / 58
+ *
+ * Sau khi chuyển đổi, hàm kiểm tra tính hợp lệ của kết quả (timeout,
+ * khoảng cách tối thiểu, dữ liệu lỗi...) trước khi trả về.
+ *
+ * @param[out] distance_cm Con trỏ lưu khoảng cách đo được (cm).
+ * @return
+ *      - 1: Giá trị hợp lệ.
+ *      - 0: Giá trị không hợp lệ hoặc phép đo thất bại.
+ */
+uint8_t HCSR04_GetDistanceCm(uint16_t *distance_cm);
+```
+
+```C
+/**
+ * @brief Lấy độ rộng xung Echo gần nhất.
+ *
+ * Hàm trả về giá trị Echo đã đo được gần nhất theo đơn vị micro giây,
+ * phục vụ việc ghi log hoặc đánh giá chất lượng tín hiệu cảm biến.
+ *
+ * @param None.
+ * @return Độ rộng xung Echo (us).
+ */
+uint32_t HCSR04_GetLastEchoUs(void);
+```
 
 ### 8.2. Driver servo MG90S
 
@@ -864,14 +961,92 @@ File:
 - [`servo_mg90s.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/servo_mg90s.h)
 - [`servo_mg90s.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/servo_mg90s.c)
 
-| Hàm | Chức năng |
-| --- | --- |
-| `Servo_Init()` | Start PWM và đặt servo về vị trí giữa |
-| `Servo_SetPulseUs()` | Ghi pulse theo micro giây |
-| `Servo_SetAngle()` | Chuyển góc sang pulse |
-| `Servo_Stop()` | Đưa servo về trạng thái dừng/an toàn |
-| `Servo_GetLastAngle()` | Trả góc cuối |
-| `Servo_GetLastPulseUs()` | Trả pulse cuối |
+Module servo MG90S chịu trách nhiệm tạo tín hiệu PWM để điều khiển góc quay của servo. Các hàm trong module cho phép khởi tạo PWM, điều khiển góc hoặc độ rộng xung trực tiếp, đồng thời lưu lại trạng thái gần nhất phục vụ việc kiểm tra và debug.
+
+```C
+/**
+ * @brief Khởi tạo driver servo MG90S.
+ *
+ * Hàm khởi động kênh PWM TIM3 Channel 1 và đưa servo về vị trí
+ * trung tâm mặc định. Đây là bước chuẩn bị trước khi radar bắt đầu
+ * thực hiện quá trình quét.
+ *
+ * @param None.
+ * @return None.
+ */
+void Servo_Init(void);
+```
+
+```C
+/**
+ * @brief Đặt độ rộng xung PWM cho servo.
+ *
+ * Hàm cập nhật độ rộng xung PWM theo đơn vị micro giây
+ *
+ * @param pulse_us Độ rộng xung PWM (us).
+ * @return None.
+ */
+void Servo_SetPulseUs(uint16_t pulse_us);
+```
+
+```C
+/**
+ * @brief Điều khiển servo theo góc quay.
+ *
+ * Đặt góc quay của servo đế vị trí mong muốn trong khoảng 0 đến 180 độ
+ *
+ * @param angle_deg Góc cần đặt (độ).
+ * @return None.
+ */
+void Servo_SetAngle(uint16_t angle_deg);
+```
+
+```C
+/**
+ * @brief Đưa servo về vị trí trung tâm.
+ *
+ * Hàm điều khiển servo quay về góc giữa (90 độ), tạo trạng thái
+ * an toàn khi hệ thống dừng hoạt động hoặc cần reset vị trí quét.
+ *
+ * @param None.
+ * @return None.
+ */
+void Servo_Stop(void);
+```
+
+```C
+/**
+ * @brief Lấy góc quay gần nhất của servo.
+ *
+ * Hàm trả về giá trị góc cuối cùng đã được đặt cho servo.
+ * Giá trị này hữu ích cho việc theo dõi trạng thái hoặc debug.
+ *
+ * @param None.
+ * @return Góc quay gần nhất (độ).
+ */
+uint16_t Servo_GetLastAngle(void);
+```
+
+```C
+/**
+ * @brief Lấy độ rộng xung PWM gần nhất.
+ *
+ * Hàm trả về giá trị độ rộng xung PWM cuối cùng đã được cấu hình
+ * cho servo theo đơn vị micro giây.
+ *
+ * @param None.
+ * @return Độ rộng xung PWM gần nhất (us).
+ */
+uint16_t Servo_GetLastPulseUs(void);
+```
+
+Các tham số cấu hình quan trọng của servo được định nghĩa trong [`radar_config.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_config.h).
+
+| Tham số                 | Giá trị mặc định | Ý nghĩa                                                                      |
+| ----------------------- | ---------------: | ---------------------------------------------------------------------------- |
+| `SERVO_MIN_PULSE_US`    |            `550` | Độ rộng xung PWM nhỏ nhất, tương ứng với góc quay nhỏ nhất của servo. (0°)   |
+| `SERVO_CENTER_PULSE_US` |           `1500` | Độ rộng xung PWM tại vị trí trung tâm (90°).                                 |
+| `SERVO_MAX_PULSE_US`    |           `2450` | Độ rộng xung PWM lớn nhất, tương ứng với góc quay lớn nhất của servo. (180°) |
 
 ### 8.3. Driver buzzer và LED
 
@@ -880,13 +1055,77 @@ File:
 - [`buzzer_led.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/buzzer_led.h)
 - [`buzzer_led.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/buzzer_led.c)
 
-| Hàm | Chức năng |
-| --- | --- |
-| `BuzzerLed_Init()` | Tắt toàn bộ output khi khởi tạo |
-| `Buzzer_Set()` | Bật/tắt buzzer |
-| `LedScan_Set()` | Bật/tắt LED scan |
-| `LedAlert_Set()` | Bật/tắt LED alert |
-| `Alert_Update()` | Phân cấp cảnh báo theo trạng thái vật cản |
+Module buzzer và LED chịu trách nhiệm điều khiển các thiết bị cảnh báo của hệ thống. Nhóm hàm này cung cấp giao diện hàm bật/tắt từng thiết bị LED và buzzer.
+
+```C
+/**
+ * @brief Khởi tạo driver buzzer và LED.
+ *
+ * @param None.
+ * @return None.
+ */
+void BuzzerLed_Init(void);
+```
+
+```C
+/**
+ * @brief Điều khiển trạng thái buzzer.
+ *
+ * Hàm bật hoặc tắt buzzer active theo trạng thái đầu vào.
+ *
+ * @param on Trạng thái buzzer (1: bật, 0: tắt).
+ * @return None.
+ */
+void Buzzer_Set(uint8_t on);
+```
+
+```C
+/**
+ * @brief Điều khiển LED Scan.
+ *
+ * Hàm bật hoặc tắt LED Scan để biểu thị trạng thái hoạt động
+ * của quá trình quét radar.
+ *
+ * @param on Trạng thái LED (1: bật, 0: tắt).
+ * @return None.
+ */
+void LedScan_Set(uint8_t on);
+```
+
+```C
+/**
+ * @brief Điều khiển LED Alert.
+ *
+ * Hàm bật hoặc tắt LED Alert nhằm thông báo trạng thái
+ * phát hiện vật cản hoặc cảnh báo khoảng cách gần.
+ *
+ * @param on Trạng thái LED (1: bật, 0: tắt).
+ * @return None.
+ */
+void LedAlert_Set(uint8_t on);
+```
+
+```C
+/**
+ * @brief Cập nhật trạng thái cảnh báo của hệ thống.
+ *
+ * Hàm quyết định trạng thái LED Alert và buzzer dựa trên
+ * kết quả phát hiện vật cản và mức cảnh báo khoảng cách.
+ *
+ * @param detected Cờ phát hiện vật cản.
+ * @param near_warning Cờ cảnh báo vật ở khoảng cách gần.
+ * @return None.
+ */
+void Alert_Update(uint8_t detected, uint8_t near_warning);
+```
+
+Logic cảnh báo hiện tại được chia thành ba mức như sau:
+
+| Trạng thái          | Điều kiện                          | LED Alert | Buzzer                      |
+| ------------------- | ---------------------------------- | --------- | --------------------------- |
+| Không phát hiện vật | `detected = 0`                     | Tắt       | Tắt                         |
+| Phát hiện vật       | `detected = 1`, `near_warning = 0` | Bật       | Tắt                         |
+| Cảnh báo gần        | `detected = 1`, `near_warning = 1` | Bật       | Nhấp nháy khoảng mỗi 120 ms |
 
 ### 8.4. Logic radar
 
@@ -895,35 +1134,167 @@ File:
 - [`radar_app.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_app.h)
 - [`radar_app.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_app.c)
 
-| Hàm | Chức năng |
-| --- | --- |
-| `RadarApp_Init()` | Khởi tạo toàn bộ module radar |
-| `RadarApp_Start()` | Bật radar |
-| `RadarApp_Stop()` | Dừng radar và đặt output an toàn |
-| `RadarApp_SetSpeedMode()` | Đặt tốc độ SLOW/MED/FAST |
-| `RadarApp_NextSpeedMode()` | Chuyển vòng tốc độ |
-| `RadarApp_SetScanMode()` | Chọn quét 90° hoặc 180° |
-| `RadarApp_ToggleScanMode()` | Đổi qua lại 90°/180° |
-| `RadarApp_TaskLoop()` | Vòng xử lý chính của radar |
-| `RadarApp_FillStoppedData()` | Tạo snapshot trạng thái dừng cho UI |
-| `RadarApp_AdvanceAngle()` | Tăng/giảm góc và đổi hướng ở biên |
-| `RadarApp_MeasureDistance()` | Thực hiện một chu kỳ đo HC-SR04 |
+Module `radar_app` là trung tâm điều phối toàn bộ hệ thống radar. Module chịu trách nhiệm quản lý trạng thái hoạt động, điều khiển servo, thực hiện phép đo khoảng cách, phân loại kết quả, cập nhật dữ liệu cho giao diện và điều khiển các thiết bị cảnh báo.
 
-`RadarApp_FillStoppedData()` không trực tiếp đo cảm biến hoặc điều khiển widget. Hàm này chuẩn bị dữ liệu an toàn khi radar dừng:
+```C
+/**
+ * @brief Khởi tạo module RadarApp.
+ *
+ * Hàm khởi tạo toàn bộ các module thành phần của hệ thống,
+ * bao gồm UI Bridge, servo MG90S, buzzer, LED, cảm biến
+ * HC-SR04 và các trạng thái mặc định của radar.
+ *
+ * @param None.
+ * @return None.
+ */
+void RadarApp_Init(void);
+```
 
-- Khoảng cách không hợp lệ.
-- Không phát hiện vật.
-- Không có cảnh báo.
-- LED/buzzer tắt.
-- Góc hiển thị trở về vị trí an toàn.
-- Cấu hình speed/mode vẫn được duy trì.
+```C
+/**
+ * @brief Bắt đầu hoạt động của radar.
+ *
+ * Hàm chuyển trạng thái radar sang hoạt động, cho phép
+ * vòng quét và quá trình đo khoảng cách được thực hiện.
+ *
+ * @param None.
+ * @return None.
+ */
+void RadarApp_Start(void);
+```
 
-### 8.5. Bridge dữ liệu UI
+```C
+/**
+ * @brief Dừng hoạt động của radar.
+ *
+ * Hàm đưa radar về trạng thái an toàn bằng cách dừng
+ * quá trình quét, đưa servo về vị trí trung tâm và
+ * tắt toàn bộ tín hiệu cảnh báo.
+ *
+ * @param None.
+ * @return None.
+ */
+void RadarApp_Stop(void);
+```
 
-File:
+```C
+/**
+ * @brief Thiết lập chế độ tốc độ quét.
+ *
+ * Hàm thay đổi tốc độ quét của radar theo chế độ được
+ * lựa chọn, bao gồm SLOW, MED và FAST.
+ *
+ * @param mode Chế độ tốc độ quét.
+ * @return None.
+ */
+void RadarApp_SetSpeedMode(RadarSpeedMode_t mode);
+```
 
-- [`radar_ui_bridge.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_ui_bridge.h)
-- [`radar_ui_bridge.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_ui_bridge.c)
+```C
+/**
+ * @brief Chuyển sang chế độ tốc độ quét tiếp theo.
+ *
+ * Hàm thay đổi tuần tự giữa các chế độ tốc độ quét
+ * SLOW → MED → FAST → SLOW.
+ *
+ * @param None.
+ * @return None.
+ */
+void RadarApp_NextSpeedMode(void);
+```
+
+```C
+/**
+ * @brief Thiết lập chế độ quét.
+ *
+ * Hàm cấu hình vùng quét của radar theo góc 90 độ
+ * hoặc 180 độ. Góc hiện tại sẽ được giới hạn để
+ * luôn nằm trong vùng quét mới.
+ *
+ * @param scan_mode_deg Góc quét (90 hoặc 180).
+ * @return None.
+ */
+void RadarApp_SetScanMode(uint8_t scan_mode_deg);
+```
+
+```C
+/**
+ * @brief Chuyển đổi chế độ quét.
+ *
+ * Hàm chuyển đổi qua lại giữa chế độ quét
+ * 90 độ và 180 độ.
+ *
+ * @param None.
+ * @return None.
+ */
+void RadarApp_ToggleScanMode(void);
+```
+
+```C
+/**
+ * @brief Vòng xử lý chính của radar.
+ *
+ * Hàm thực hiện toàn bộ chu trình hoạt động của radar,
+ * bao gồm đọc trạng thái điều khiển, đặt góc servo,
+ * đo khoảng cách bằng HC-SR04, phân loại trạng thái
+ * phát hiện vật cản, cập nhật dữ liệu giao diện,
+ * điều khiển cảnh báo và chuyển sang góc quét tiếp theo.
+ *
+ * Hàm được gọi lặp liên tục trong radar task để duy trì
+ * hoạt động của hệ thống.
+ *
+ * @param None.
+ * @return None.
+ */
+void RadarApp_TaskLoop(void);
+```
+
+Các chế độ tốc độ quét được định nghĩa trong `RadarSpeedMode_t`.
+
+| Chế độ             | Ý nghĩa                                                                     |
+| ------------------ | --------------------------------------------------------------------------- |
+| `RADAR_SPEED_SLOW` | Quét chậm với thời gian dừng lớn hơn tại mỗi góc, giúp phép đo ổn định hơn. |
+| `RADAR_SPEED_MED`  | Tốc độ quét trung bình, cân bằng giữa tốc độ và độ ổn định.                 |
+| `RADAR_SPEED_FAST` | Quét nhanh, giảm thời gian dừng tại mỗi góc để tăng tốc độ cập nhật.        |
+
+Các trạng thái của rader được định nghĩa trong `RadarStatus_t`
+| Giá trị | Ý nghĩa |
+| --------------------- | --------------------------------------------------- |
+| `RADAR_STATUS_SCAN` | Radar đang quét và chưa phát hiện vật cản. |
+| `RADAR_STATUS_DETECT` | Radar đã phát hiện vật cản trong vùng quét. |
+| `RADAR_STATUS_ALERT` | Radar phát hiện vật cản ở khoảng cách cảnh báo gần. |
+
+Các biến data khi quét của radar được định nghĩa trong struct `RadarCoreData_t`.
+
+| Thành viên                | Kiểu dữ liệu | Ý nghĩa                                                    |
+| ------------------------- | ------------ | ---------------------------------------------------------- |
+| `angle_deg`               | `uint16_t`   | Góc quét hiện tại của servo (độ).                          |
+| `distance_cm`             | `uint16_t`   | Khoảng cách đo được từ cảm biến HC-SR04 (cm).              |
+| `distance_valid`          | `uint8_t`    | Cờ xác nhận kết quả đo hợp lệ.                             |
+| `object_detected`         | `uint8_t`    | Cờ cho biết có phát hiện vật cản hay không.                |
+| `near_warning`            | `uint8_t`    | Cờ cảnh báo khi vật ở khoảng cách nguy hiểm.               |
+| `radar_status`            | `uint8_t`    | Trạng thái hiện tại của radar (`SCAN`, `DETECT`, `ALERT`). |
+| `object_count`            | `uint16_t`   | Tổng số lần phát hiện vật cản.                             |
+| `last_object_distance_cm` | `uint16_t`   | Khoảng cách của vật cản được phát hiện gần nhất.           |
+| `last_object_angle_deg`   | `uint16_t`   | Góc của vật cản được phát hiện gần nhất.                   |
+| `buzzer_on`               | `uint8_t`    | Trạng thái hoạt động của buzzer.                           |
+| `led3_on`                 | `uint8_t`    | Trạng thái LED Scan.                                       |
+| `led4_on`                 | `uint8_t`    | Trạng thái LED Alert.                                      |
+| `oled_connected`          | `uint8_t`    | Trạng thái kết nối của màn hình OLED.                      |
+
+Đóng gói dữ liệu thành một struct duy nhất `RadarUiData_t`
+
+| Thành viên  | Kiểu dữ liệu           | Ý nghĩa                                                                                            |
+| ----------- | ---------------------- | -------------------------------------------------------------------------------------------------- |
+| `core_data` | `RadarCoreData_t`      | Nhóm dữ liệu hoạt động của radar dùng để hiển thị trên giao diện.                                  |
+| `control`   | `RadarControlConfig_t` | Nhóm thông tin cấu hình điều khiển của radar như trạng thái hoạt động, chế độ quét và tốc độ quét. |
+
+Radar hỗ trợ hai chế độ vùng quét.
+
+| Chế độ | Phạm vi góc                  |
+| ------ | ---------------------------- |
+| `90°`  | Quét từ 45° đến 135°.        |
+| `180°` | Quét toàn bộ từ 0° đến 180°. |
 
 | Hàm | Chức năng |
 | --- | --- |
@@ -956,21 +1327,95 @@ typedef struct
 } RadarCoreData_t;
 ```
 
-```c
-typedef struct
-{
-    uint8_t radar_enabled;
-    uint8_t scan_mode_deg;
-    uint8_t speed_mode;
-} RadarControlConfig_t;
+Module UI Bridge đóng vai trò cầu nối giữa radar task và giao diện TouchGFX. Nhóm hàm này quản lý dữ liệu dùng chung, đồng bộ các tham số cấu hình và cung cấp cơ chế trao đổi dữ liệu an toàn giữa các task.
+
+```C
+/**
+ * @brief Khởi tạo module Radar UI Bridge.
+ *
+ * Hàm khởi tạo cấu trúc RadarUiData_t với các giá trị mặc định,
+ * đảm bảo giao diện có dữ liệu hợp lệ trước khi radar bắt đầu hoạt động.
+ *
+ * @param None.
+ * @return None.
+ */
+void RadarUiBridge_Init(void);
 ```
 
-```c
-typedef struct
-{
-    RadarCoreData_t core_data;
-    RadarControlConfig_t control;
-} RadarUiData_t;
+```C
+/**
+ * @brief Cập nhật dữ liệu dùng chung cho giao diện.
+ *
+ * Hàm sao chép dữ liệu từ radar task vào vùng nhớ dùng chung để
+ * giap diện co thể hiển thị
+ *
+ * @param data Con trỏ tới cấu trúc RadarCoreData_t cần cập nhật.
+ * @return None.
+ */
+void RadarUiBridge_SetData(const RadarCoreData_t *data);
+```
+
+```C
+/**
+ * @brief Đọc dữ liệu hiện tại của radar.
+ *
+ * Hàm sao chép dữ liệu từ vùng nhớ dùng chung ra cấu trúc do
+ * chương trình gọi cung cấp.
+ *
+ * @param[out] data Con trỏ lưu dữ liệu RadarUiData_t.
+ * @return None.
+ */
+void RadarUiBridge_GetData(RadarUiData_t *data);
+```
+
+```C
+/**
+ * @brief Cập nhật trạng thái bật/tắt của radar.
+ *
+ * Hàm thay đổi trạng thái hoạt động của radar
+ *
+ * @param enabled Trạng thái radar (1: bật, 0: tắt).
+ * @return None.
+ */
+void RadarUiBridge_SetRadarEnabled(uint8_t enabled);
+```
+
+```C
+/**
+ * @brief Cập nhật chế độ tốc độ quét.
+ *
+ * Hàm lưu chế độ tốc độ quét hiện tại vào vùng dữ liệu dùng chung
+ *
+ * @param speed_mode Chế độ tốc độ quét.
+ * @return None.
+ */
+void RadarUiBridge_SetSpeedMode(uint8_t speed_mode);
+```
+
+```C
+/**
+ * @brief Cập nhật chế độ quét.
+ *
+ * Hàm lưu chế độ quét hiện tại (90° hoặc 180°) vào vùng dữ liệu
+ * dùng chung
+ *
+ * @param scan_mode_deg Góc quét của radar.
+ * @return None.
+ */
+void RadarUiBridge_SetScanMode(uint8_t scan_mode_deg);
+```
+
+```C
+/**
+ * @brief Chuyển sang chế độ tốc độ quét tiếp theo.
+ *
+ * Hàm thay đổi tuần tự giữa các chế độ tốc độ quét được hỗ trợ
+ * và cập nhật kết quả vào vùng dữ liệu dùng chung.
+ *
+ * @param None.
+ * @return None.
+ */
+void RadarUiBridge_NextSpeedMode(void);
 ```
 
 > [!NOTE]
@@ -985,50 +1430,75 @@ File:
 - [`ScreenSettingsView.cpp`](./radar_short_range_touchgfx/TouchGFX/gui/src/screensettings_screen/ScreenSettingsView.cpp)
 - [`ScreenInfoView.cpp`](./radar_short_range_touchgfx/TouchGFX/gui/src/screeninfo_screen/ScreenInfoView.cpp)
 
-| Hàm | Chức năng |
-| --- | --- |
-| `ScreenHomeView::setupScreen()` | Đưa hệ thống về trạng thái Home |
-| `ScreenScanView::setupScreen()` | Khởi động radar và reset hiển thị |
-| `ScreenScanView::handleTickEvent()` | Cập nhật UI định kỳ |
-| `ScreenScanView::updateRadarUi()` | Cập nhật angle, distance, status và sweep |
-| `ScreenScanView::updateTarget()` | Tính vị trí target dot |
-| `ScreenSettingsView::handleClickEvent()` | Xử lý chọn speed và mode |
-| `ScreenInfoView::updateInfoText()` | Hiển thị thống kê hệ thống |
+Nhóm các màn hình TouchGFX chịu trách nhiệm hiển thị trạng thái hoạt động của radar và tiếp nhận thao tác từ người dùng. Các màn hình trao đổi dữ liệu với radar thông qua `RadarUiBridge`, bảo đảm tách biệt giữa giao diện và logic xử lý.
 
-### 8.7. Debug UART
-
-File:
-
-- [`radar_debug.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_debug.h)
-- [`radar_debug.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_debug.c)
-
-`RadarDebug_Printf()` là wrapper cho USART1. Hàm tạo chuỗi bằng `vsnprintf()` rồi gọi `HAL_UART_Transmit()`.
-
-Các thông tin debug gồm:
-
-- Góc servo.
-- Pulse servo.
-- Khoảng cách.
-- Echo micro giây.
-- State HC-SR04.
-- Số lần start.
-- Số cạnh rising.
-- Số cạnh falling.
-- Số lần timeout.
-- Delta counter giữa hai lần log.
-
-Các biến:
-
-```c
-static uint32_t prev_start;
-static uint32_t prev_rise;
-static uint32_t prev_fall;
-static uint32_t prev_tout;
+```C
+/**
+ * @brief Cập nhật giao diện radar.
+ *
+ * Hàm đọc dữ liệu từ RadarUiBridge và cập nhật các thành
+ * phần hiển thị như góc quét, khoảng cách đo được, trạng
+ * thái phát hiện vật cản và hiệu ứng quét radar.
+ *
+ * @param None.
+ * @return None.
+ */
+void ScreenScanView::updateRadarUi(void);
 ```
 
-chỉ dùng để lưu counter của lần log trước và tính số sự kiện phát sinh trong khoảng thời gian giữa hai lần in UART. Chúng không tham gia trực tiếp vào thuật toán đo khoảng cách.
+```C
+/**
+ * @brief Cập nhật vị trí mục tiêu trên giao diện radar.
+ *
+ * Hàm chuyển đổi góc quét và khoảng cách đo được sang tọa
+ * độ hiển thị trên màn hình, đồng thời quyết định có hiển
+ * thị mục tiêu hay không.
+ *
+ * @param angleDeg Góc phát hiện vật cản (độ).
+ * @param distanceCm Khoảng cách đo được (cm).
+ * @param visible Cờ hiển thị mục tiêu.
+ * @return None.
+ */
+void ScreenScanView::updateTarget(uint16_t angleDeg,
+                                  uint16_t distanceCm,
+                                  uint8_t visible);
+```
 
----
+```C
+/**
+ * @brief Xử lý sự kiện nhấn trên màn hình Settings.
+ *
+ * Hàm tiếp nhận các thao tác của người dùng trên giao diện
+ * để thay đổi tốc độ quét hoặc chế độ quét của radar.
+ *
+ * @param event Sự kiện Click của TouchGFX.
+ * @return None.
+ */
+void ScreenSettingsView::handleClickEvent(const touchgfx::ClickEvent& event);
+```
+
+```C
+/**
+ * @brief Cập nhật thông tin trên màn hình Info.
+ *
+ * Hàm đọc dữ liệu hiện tại của radar và cập nhật các thông
+ * tin thống kê như chế độ quét, tốc độ quét, khoảng cách,
+ * góc quét gần nhất và số lượng vật thể phát hiện.
+ *
+ * @param None.
+ * @return None.
+ */
+void ScreenInfoView::updateInfoText(void);
+```
+
+Các màn hình TouchGFX đảm nhiệm các chức năng chính như sau.
+
+| Màn hình     | Chức năng                                                                                                     |
+| ------------ | ------------------------------------------------------------------------------------------------------------- |
+| **Home**     | Hiển thị màn hình chính và đưa radar về trạng thái dừng an toàn.                                              |
+| **Scan**     | Hiển thị hiệu ứng quét radar, mục tiêu phát hiện, góc quét, khoảng cách và trạng thái hoạt động của hệ thống. |
+| **Settings** | Cho phép người dùng thay đổi tốc độ quét và vùng quét của radar.                                              |
+| **Info**     | Hiển thị các thông tin thống kê và trạng thái hoạt động hiện tại của hệ thống.                                |
 
 ## 9. KẾT QUẢ
 
