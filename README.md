@@ -346,6 +346,31 @@ Nên kiểm thử từng khối theo thứ tự:
 7. Ghép TouchGFX.
 8. Kiểm thử toàn hệ thống.
 
+### 4.8. Video demo phần cứng và vận hành hệ thống
+
+Video dưới đây minh họa quá trình lắp ráp và vận hành thực tế của hệ thống radar tầm ngắn. Nội dung demo gồm:
+
+- Board STM32F429I-DISC1 và các kết nối phần cứng.
+- Servo MG90S quay cảm biến HC-SR04.
+- HC-SR04 đo khoảng cách vật cản.
+- Giao diện TouchGFX hiển thị góc, khoảng cách và trạng thái radar.
+- LED và buzzer phản hồi khi phát hiện vật cản gần.
+- Thay đổi tốc độ quét và chế độ quét 90°/180°.
+
+<p align="center">
+  <a href="YOUTUBE_VIDEO_URL">
+    <img src="https://img.youtube.com/vi/YOUTUBE_VIDEO_ID/maxresdefault.jpg"
+         width="700"
+         alt="Video demo hệ thống radar tầm ngắn">
+  </a>
+  <br>
+  <em>Video 1. Demo phần cứng và vận hành hệ thống radar tầm ngắn.</em>
+</p>
+
+<p align="center">
+  <a href="YOUTUBE_VIDEO_URL"><strong>▶ Xem video demo trên YouTube</strong></a>
+</p>
+
 ---
 
 ## 5. NGUYÊN LÝ HOẠT ĐỘNG
