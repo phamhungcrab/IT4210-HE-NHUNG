@@ -4,12 +4,16 @@
 
 ## Tóm tắt
 
-Dự án triển khai một hệ thống quét vật cản tầm ngắn theo mô hình radar. Cảm biến HC-SR04 được gắn trên servo MG90S để thay đổi góc quét, STM32F429I-DISC1 đọc tín hiệu echo, tính khoảng cách, xử lý ngưỡng phát hiện và hiển thị trạng thái trên màn hình LCD TouchGFX tích hợp của board.
+Dự án triển khai một hệ thống quét vật cản tầm ngắn theo mô hình radar. Cảm biến HC-SR04 được gắn trên servo MG90S để thay đổi góc quét. STM32F429I-DISC1 phát tín hiệu trigger, đo độ rộng xung echo, tính khoảng cách, xử lý các ngưỡng phát hiện và cập nhật dữ liệu lên màn hình LCD TouchGFX tích hợp của board.
 
-Hệ thống có các chức năng chính: quét theo góc, đo khoảng cách vật cản, hiển thị góc/khoảng cách/trạng thái, đổi chế độ quét, đổi tốc độ quét và cảnh báo bằng LED/buzzer khi vật ở vùng gần. Project chính nằm trong thư mục [`radar_short_range_touchgfx`](./radar_short_range_touchgfx).
+Hệ thống hỗ trợ quét theo góc, đo khoảng cách vật cản, hiển thị góc/khoảng cách/trạng thái, thay đổi chế độ quét, thay đổi tốc độ quét và cảnh báo bằng LED/buzzer khi vật cản nằm trong vùng gần.
+
+Project chính nằm trong thư mục [`radar_short_range_touchgfx`](./radar_short_range_touchgfx).
 
 > [!NOTE]
-> Báo cáo ưu tiên thông tin đã kiểm chứng từ repo và file cấu hình. Các mục cần minh chứng thực nghiệm như ảnh, video, bảng đo và phần OLED SH1106 vẫn được giữ `TODO` để nhóm bổ sung sau, tránh mô tả vượt quá dữ liệu hiện có.
+> Phiên bản hoàn thiện của đề tài sử dụng LCD TouchGFX tích hợp trên STM32F429I-DISC1 làm màn hình hiển thị duy nhất. Báo cáo không mô tả các thiết bị hiển thị ngoài chưa được lắp đặt và kiểm thử thực tế.
+>
+> Các mục cần minh chứng thực nghiệm như ảnh đấu nối, video demo và bảng đo sai số được giữ dưới dạng placeholder để nhóm bổ sung trước khi nộp.
 
 ## Mục lục
 
@@ -26,7 +30,9 @@ Hệ thống có các chức năng chính: quét theo góc, đo khoảng cách v
 - [11. KHÓ KHĂN VÀ KINH NGHIỆM RÚT RA](#11-khó-khăn-và-kinh-nghiệm-rút-ra)
 - [12. HƯỚNG PHÁT TRIỂN](#12-hướng-phát-triển)
 - [13. TÀI LIỆU THAM KHẢO](#13-tài-liệu-tham-khảo)
-- [14. KẾT LUẬN NGẮN](#14-kết-luận-ngắn)
+- [14. KẾT LUẬN](#14-kết-luận)
+
+---
 
 ## 1. GIỚI THIỆU
 
@@ -42,22 +48,28 @@ Mục tiêu của đề tài là thiết kế và triển khai một sản phẩ
 - Đo khoảng cách vật cản bằng cảm biến siêu âm HC-SR04.
 - Điều khiển servo MG90S để thay đổi hướng quét.
 - Hiển thị trực quan trạng thái radar trên LCD TouchGFX của STM32F429I-DISC1.
+- Hiển thị góc quét, khoảng cách, trạng thái và vị trí tương đối của vật cản.
 - Cảnh báo bằng LED và buzzer khi phát hiện vật thể trong vùng gần.
-- Cho phép thay đổi tốc độ quét và chế độ quét thông qua giao diện hoặc nút USER.
+- Cho phép thay đổi tốc độ và chế độ quét bằng giao diện cảm ứng hoặc nút USER.
+- Hỗ trợ UART debug để theo dõi tín hiệu echo, khoảng cách và trạng thái chương trình.
 
 ### 1.3. Ý tưởng hệ thống
 
-Hệ thống không phải radar RF theo nghĩa vật lý, mà là một mô hình radar tầm ngắn dùng cảm biến siêu âm để mô phỏng quá trình quét và phát hiện vật cản. Servo quay cảm biến HC-SR04 qua từng góc; tại mỗi góc, STM32 phát xung trigger, đo độ rộng xung echo, tính khoảng cách và cập nhật dữ liệu cho giao diện TouchGFX.
+Hệ thống không phải radar RF theo nghĩa vật lý mà là một mô hình radar tầm ngắn sử dụng cảm biến siêu âm để mô phỏng quá trình quét và phát hiện vật cản.
+
+Servo MG90S quay cảm biến HC-SR04 qua từng góc. Tại mỗi vị trí, STM32 phát xung trigger, bắt cạnh lên và cạnh xuống của tín hiệu echo, tính khoảng cách rồi gửi dữ liệu cho giao diện TouchGFX.
 
 Luồng xử lý tổng quát:
 
 1. Servo được đặt tới góc quét hiện tại.
-2. STM32 phát xung trigger 10 us tới HC-SR04.
-3. Echo được bắt bằng ngắt ngoài EXTI3 trên chân PG3.
-4. Phần mềm tính thời gian echo và suy ra khoảng cách.
-5. Logic ứng dụng xác định trạng thái `SCAN`, `DETECT` hoặc `ALERT`.
-6. LCD TouchGFX, LED và buzzer được cập nhật theo trạng thái mới.
-7. Góc quét được tăng/giảm để tiếp tục chu kỳ quét.
+2. Hệ thống chờ một khoảng ngắn để cơ cấu servo ổn định.
+3. STM32 phát xung trigger 10 us tới HC-SR04.
+4. Echo được bắt bằng ngắt ngoài EXTI3 trên chân PG3.
+5. Phần mềm tính thời gian echo và suy ra khoảng cách.
+6. Logic ứng dụng xác định trạng thái `SCAN`, `DETECT` hoặc `ALERT`.
+7. Dữ liệu radar được gửi sang giao diện bằng FreeRTOS message queue.
+8. LCD TouchGFX, LED và buzzer được cập nhật theo trạng thái mới.
+9. Góc quét được tăng hoặc giảm để tiếp tục chu kỳ quét.
 
 ### 1.4. Chức năng chính
 
@@ -69,15 +81,19 @@ Luồng xử lý tổng quát:
 | Chế độ quét         | Hỗ trợ chế độ quét 90 độ và 180 độ theo cấu hình trong `radar_config.h`.     |
 | Tốc độ quét         | Hỗ trợ các mức `SLOW`, `MED`, `FAST`.                                        |
 | Cảnh báo            | LED/buzzer phản hồi theo trạng thái phát hiện vật cản và vật cản gần.        |
+| Nút USER | Bấm ngắn đổi tốc độ; giữ lâu đổi chế độ quét |
+| FreeRTOS queue | Truyền dữ liệu radar và cấu hình điều khiển giữa các task |
 | Điều khiển nút USER | Bấm ngắn đổi tốc độ; giữ lâu đổi chế độ quét.                                |
 | Debug UART          | In trạng thái đo, echo, counter và dữ liệu UI qua USART1.                    |
 
 ### 1.5. Cấu trúc project chính
 
 ```text
-IT4210/
+IT4210-HE-NHUNG/
 |-- README.md
 |-- REPORT_PLAN.md
+|-- docs/
+|   `-- images/
 `-- radar_short_range_touchgfx/
     |-- Core/
     |-- Drivers/
@@ -87,6 +103,8 @@ IT4210/
     |-- DesignAssets/
     `-- STM32F429I_DISCO_REV_D01.ioc
 ```
+
+---
 
 ## 2. TÁC GIẢ
 
@@ -101,190 +119,315 @@ IT4210/
 
 ### 2.2. Phân công công việc
 
-> [!IMPORTANT]
-> Repo hiện chưa có dữ liệu đủ chắc để kết luận chi tiết phân công từng thành viên. Bảng dưới đây được tạo sẵn để nhóm điền trước khi nộp báo cáo.
-
-| Thành viên        | Công việc chính                | Ghi chú |
-| ----------------- | ------------------------------ | ------- |
-| Nguyễn Minh Giang | TODO: Điền phần việc thực hiện | TODO    |
-| Bùi Trung Hoàng   | TODO: Điền phần việc thực hiện | TODO    |
-| Phạm Ngọc Hưng    | TODO: Điền phần việc thực hiện | TODO    |
-| Khương Anh Tài    | TODO: Điền phần việc thực hiện | TODO    |
+| Thành viên | Công việc chính | Ghi chú |
+| --- | --- | --- |
+| Nguyễn Minh Giang | TODO: Nhóm bổ sung theo phân công thực tế | TODO |
+| Bùi Trung Hoàng | TODO: Nhóm bổ sung theo phân công thực tế | TODO |
+| **Phạm Ngọc Hưng** | **Thiết kế giao diện TouchGFX; xây dựng các màn Home, Scan, Settings, Info; tích hợp dữ liệu radar lên UI** | Phụ trách UI |
+| **Khương Anh Tài** | **Xây dựng mạch; tích hợp logic UI và refator đoạn code thừa** | Phần cứng & UI |
 
 ## 3. MÔI TRƯỜNG HOẠT ĐỘNG
 
 ### 3.1. Board STM32F429I-DISC1
 
-Hệ thống sử dụng board **STM32F429I-DISC1** làm nền tảng điều khiển trung tâm. Vi điều khiển chính là **STM32F429ZIT6**, thuộc dòng STM32F4, phù hợp với bài toán vừa điều khiển ngoại vi thời gian thực vừa chạy giao diện đồ họa nhúng.
+Hệ thống sử dụng board **STM32F429I-DISC1** làm bộ điều khiển trung tâm. Vi điều khiển chính là **STM32F429ZIT6**, thuộc dòng STM32F4, phù hợp với bài toán vừa điều khiển ngoại vi thời gian thực vừa chạy giao diện đồ họa nhúng.
 
-Trong project này, board đảm nhiệm các vai trò:
+Trong project, board đảm nhiệm các vai trò:
 
-- Khởi tạo và điều phối toàn bộ ngoại vi: GPIO, EXTI, TIM, I2C, UART, LTDC, DMA2D và FMC/SDRAM.
-- Chạy **FreeRTOS CMSIS v2** để tách logic giao diện, logic radar và xử lý nút USER.
-- Chạy **TouchGFX** trên LCD tích hợp của board để hiển thị giao diện radar.
-- Điều khiển servo MG90S bằng PWM, đọc cảm biến HC-SR04 bằng ngắt ngoài và phát tín hiệu cảnh báo qua LED/buzzer.
+- Khởi tạo và điều phối GPIO, EXTI, timer, UART, LTDC, DMA2D và FMC/SDRAM.
+- Chạy **FreeRTOS CMSIS v2** để tách xử lý radar, giao diện và nút USER.
+- Chạy **TouchGFX** trên LCD tích hợp của board.
+- Điều khiển servo MG90S bằng PWM.
+- Đọc cảm biến HC-SR04 bằng ngắt ngoài.
+- Điều khiển LED và buzzer.
+- Truyền log debug về máy tính qua USART1.
 
-Board STM32F429I-DISC1 có LCD và SDRAM tích hợp, đây là lợi thế cho giao diện TouchGFX nhưng cũng làm số chân trống bị hạn chế. Vì vậy pin mapping trong báo cáo phải bám sát file cấu hình [`STM32F429I_DISCO_REV_D01.ioc`](./radar_short_range_touchgfx/STM32F429I_DISCO_REV_D01.ioc) và file [`Core/Inc/main.h`](./radar_short_range_touchgfx/Core/Inc/main.h).
+Board STM32F429I-DISC1 có LCD và SDRAM tích hợp. Đây là lợi thế lớn khi triển khai TouchGFX, nhưng cũng làm nhiều chân của MCU đã được sử dụng bởi LCD và bộ nhớ ngoài.
+
+Vì vậy pin mapping phải bám sát:
+
+- [`STM32F429I_DISCO_REV_D01.ioc`](./radar_short_range_touchgfx/STM32F429I_DISCO_REV_D01.ioc)
+- [`Core/Inc/main.h`](./radar_short_range_touchgfx/Core/Inc/main.h)
 
 ### 3.2. Các module sử dụng
 
-| Nhóm                 | Module                             | Vai trò                                                  |
-| -------------------- | ---------------------------------- | -------------------------------------------------------- |
-| Điều khiển trung tâm | STM32F429I-DISC1 / STM32F429ZIT6   | Chạy firmware, FreeRTOS, TouchGFX và điều phối ngoại vi  |
-| Đo khoảng cách       | HC-SR04                            | Đo khoảng cách vật cản bằng sóng siêu âm                 |
-| Cơ cấu quét          | Servo MG90S                        | Quay cảm biến theo góc quét                              |
-| Hiển thị chính       | LCD tích hợp trên STM32F429I-DISC1 | Hiển thị giao diện radar bằng TouchGFX                   |
-| Hiển thị phụ         | OLED SH1106 I2C                    | TODO: xác nhận mức độ hoàn thiện driver/hình ảnh thực tế |
-| Cảnh báo             | Buzzer active                      | Phát cảnh báo âm thanh khi vật thể ở vùng gần            |
-| Chỉ thị trạng thái   | LED on-board PG13/PG14             | Báo trạng thái quét và cảnh báo                          |
-| Điều khiển nhanh     | Nút USER PA0/WKUP                  | Bấm ngắn đổi tốc độ, giữ lâu đổi chế độ quét             |
-| Debug                | USART1 PA9/PA10                    | In log đo khoảng cách, echo, counter và dữ liệu UI       |
+| Nhóm | Module | Vai trò |
+| --- | --- | --- |
+| Điều khiển trung tâm | STM32F429I-DISC1 / STM32F429ZIT6 | Chạy firmware, FreeRTOS, TouchGFX và điều phối ngoại vi |
+| Đo khoảng cách | HC-SR04 | Đo khoảng cách vật cản bằng sóng siêu âm |
+| Cơ cấu quét | Servo MG90S | Quay cảm biến theo góc quét |
+| Hiển thị | LCD tích hợp trên STM32F429I-DISC1 | Hiển thị giao diện radar bằng TouchGFX |
+| Cảnh báo | Buzzer active | Cảnh báo âm thanh khi vật thể ở vùng gần |
+| Chỉ thị trạng thái | LED on-board PG13/PG14 | Báo trạng thái quét và cảnh báo |
+| Điều khiển nhanh | Nút USER PA0/WKUP | Bấm ngắn đổi tốc độ, giữ lâu đổi chế độ |
+| Debug | USART1 PA9/PA10 | In log đo khoảng cách, echo và trạng thái hệ thống |
 
-### 3.3. Bill of Materials (BOM)
+### 3.3. Bill of Materials
 
-| STT | Linh kiện                                | Số lượng | Vai trò                             | Ghi chú kỹ thuật                                                                                 |
-| --: | ---------------------------------------- | -------: | ----------------------------------- | ------------------------------------------------------------------------------------------------ |
-|   1 | STM32F429I-DISC1 / STM32F429ZIT6         |        1 | Board điều khiển trung tâm          | Có LCD, SDRAM, ST-LINK; project cấu hình TouchGFX, LTDC, DMA2D, FMC/SDRAM                        |
-|   2 | HC-SR04                                  |        1 | Cảm biến đo khoảng cách             | Trigger 10 us; echo đo bằng EXTI3 trên PG3; sóng siêu âm 40 kHz; cần lưu ý echo có thể ở mức 5 V |
-|   3 | Servo MG90S                              |        1 | Quay cảm biến HC-SR04 theo góc quét | Điều khiển bằng PWM TIM3_CH1 trên PB4; cần nguồn đủ dòng, GND chung với STM32                    |
-|   4 | OLED SH1106 I2C                          |        1 | Màn hình phụ theo yêu cầu phần cứng | I2C3 SCL/SDA trên PA8/PC9; TODO: xác nhận driver OLED trong firmware                             |
-|   5 | Buzzer active                            |        1 | Cảnh báo âm thanh                   | Điều khiển GPIO PC4; code hiện bật/tắt theo trạng thái cảnh báo gần                              |
-|   6 | LED on-board                             |        2 | Chỉ thị scan và alert               | PG13 là `LED3_SCAN`, PG14 là `LED4_ALERT`                                                        |
-|   7 | LCD tích hợp trên board                  |        1 | Giao diện người dùng chính          | TouchGFX 4.26.1, LTDC 240 x 320, RGB565                                                          |
-|   8 | Nút USER trên board                      |        1 | Điều khiển nhanh                    | PA0/WKUP; bấm ngắn đổi tốc độ, giữ lâu đổi mode 90/180 độ                                        |
-|   9 | Dây jumper / breadboard / dây nguồn      |     TODO | Đấu nối phần cứng                   | TODO: cập nhật theo ảnh đấu nối thực tế                                                          |
-|  10 | Mạch chia áp hoặc level shifter cho Echo |     TODO | Bảo vệ GPIO 3.3 V                   | Khuyến nghị khi module HC-SR04 xuất echo 5 V                                                     |
+| STT | Linh kiện | Số lượng | Vai trò | Ghi chú kỹ thuật |
+| ---: | --- | ---: | --- | --- |
+| 1 | STM32F429I-DISC1 | 1 | Board điều khiển trung tâm | Có LCD, SDRAM và ST-LINK |
+| 2 | HC-SR04 | 1 | Cảm biến đo khoảng cách | Trigger 10 us, sóng siêu âm khoảng 40 kHz |
+| 3 | Servo MG90S | 1 | Quay cảm biến theo góc | Điều khiển PWM trên TIM3_CH1/PB4 |
+| 4 | Buzzer active | 1 | Cảnh báo âm thanh | Điều khiển GPIO PC4 |
+| 5 | LED on-board | 2 | Báo scan và alert | PG13 và PG14 |
+| 6 | LCD tích hợp | 1 | Hiển thị giao diện TouchGFX | LCD có sẵn trên board |
+| 7 | Nút USER | 1 | Điều khiển nhanh | PA0/WKUP |
+| 8 | Mạch chia áp hoặc level shifter | 1 | Hạ mức tín hiệu echo | Bảo vệ GPIO 3.3 V |
+| 9 | Dây jumper và breadboard | 1 bộ | Đấu nối phần cứng | Cần bảo đảm tiếp xúc chắc chắn |
+| 10 | Nguồn 5 V đủ dòng | 1 | Cấp nguồn servo và cảm biến | Nên có tụ lọc gần servo |
 
 ### 3.4. Phần mềm và công cụ
 
-| Hạng mục             | Thông tin đã xác định                                     |
-| -------------------- | --------------------------------------------------------- |
-| Project chính        | `radar_short_range_touchgfx`                              |
-| File cấu hình CubeMX | `radar_short_range_touchgfx/STM32F429I_DISCO_REV_D01.ioc` |
-| MCU                  | STM32F429ZITx                                             |
-| STM32CubeMX          | 6.17.0                                                    |
-| STM32Cube FW_F4      | V1.28.3                                                   |
-| TouchGFX             | X-CUBE-TOUCHGFX 4.26.1                                    |
-| RTOS                 | FreeRTOS CMSIS v2                                         |
-| Toolchain mục tiêu   | STM32CubeIDE                                              |
-| Giao diện đồ họa     | TouchGFX, LTDC, DMA2D, SDRAM                              |
+| Hạng mục | Thông tin |
+| --- | --- |
+| Project chính | `radar_short_range_touchgfx` |
+| File cấu hình CubeMX | `STM32F429I_DISCO_REV_D01.ioc` |
+| MCU | STM32F429ZITx |
+| STM32CubeMX | 6.17.0 |
+| STM32Cube FW_F4 | V1.28.3 |
+| TouchGFX | X-CUBE-TOUCHGFX 4.26.1 |
+| RTOS | FreeRTOS CMSIS v2 |
+| Toolchain | STM32CubeIDE |
+| Giao diện | TouchGFX, LTDC, DMA2D, SDRAM |
 
 ### 3.5. Cấu hình ngoại vi chính
 
-| Ngoại vi  | Cấu hình / vai trò                                                        |
-| --------- | ------------------------------------------------------------------------- |
-| TIM3 CH1  | PWM servo trên PB4, Prescaler = 89, Period = 19999, Pulse = 1500          |
-| EXTI3     | Bắt tín hiệu echo của HC-SR04 trên PG3, rising/falling edge               |
-| TIM2      | Có cấu hình input capture trong `.ioc`; code HC-SR04 hiện dùng EXTI + DWT |
-| I2C3      | SCL PA8, SDA PC9, tốc độ 100 kHz                                          |
-| USART1    | TX PA9, RX PA10, dùng cho debug UART                                      |
-| LTDC      | Điều khiển LCD tích hợp, 240 x 320, RGB565                                |
-| DMA2D     | Tăng tốc đồ họa cho TouchGFX                                              |
-| FMC/SDRAM | Bộ nhớ ngoài phục vụ framebuffer/TouchGFX                                 |
-| FreeRTOS  | Tách task GUI, task radar và task xử lý nút USER                          |
+| Ngoại vi | Cấu hình / vai trò |
+| --- | --- |
+| TIM3 CH1 | PWM servo trên PB4, Prescaler = 89, Period = 19999, Pulse = 1500 |
+| EXTI3 | Bắt tín hiệu echo trên PG3 ở cả cạnh lên và cạnh xuống |
+| DWT CYCCNT | Tạo delay micro giây và đo độ rộng echo |
+| TIM2 | Có cấu hình input capture nhưng không phải đường đo chính hiện tại |
+| USART1 | TX PA9, RX PA10, dùng cho debug UART |
+| LTDC | Điều khiển LCD tích hợp, kích thước giao diện 240 x 320 |
+| DMA2D | Tăng tốc xử lý đồ họa |
+| FMC/SDRAM | Bộ nhớ ngoài phục vụ TouchGFX |
+| FreeRTOS | Chạy GUI task, radar task, button task và message queue |
+
+---
 
 ## 4. SƠ ĐỒ SCHEMATIC / KẾT NỐI PHẦN CỨNG
 
 ### 4.1. Sơ đồ khối hệ thống
 
 <p align="center">
-  <img src="docs/images/a.png" width="700" alt="Sơ đồ khối hệ thống">
+  <img src="docs/images/a.png" width="700" alt="Sơ đồ khối hệ thống radar tầm ngắn">
   <br>
-  <em>Hình 1. Sơ đồ khối hệ thống.</em>
+  <em>Hình 1. Sơ đồ khối hệ thống radar tầm ngắn.</em>
 </p>
 
-Sơ đồ khối cần thể hiện STM32F429I-DISC1 là trung tâm. HC-SR04 gửi tín hiệu echo về STM32, servo nhận PWM để thay đổi góc quét, LCD TouchGFX hiển thị dữ liệu, LED/buzzer phản hồi trạng thái cảnh báo, OLED SH1106 kết nối qua I2C3 nếu phần hiển thị phụ được hoàn thiện.
+STM32F429I-DISC1 là bộ xử lý trung tâm của hệ thống:
+
+- HC-SR04 nhận trigger và gửi echo về STM32.
+- Servo MG90S nhận PWM để thay đổi hướng quét.
+- LCD TouchGFX hiển thị dữ liệu radar.
+- LED và buzzer phản hồi trạng thái cảnh báo.
+- Nút USER thay đổi tốc độ và chế độ quét.
+- USART1 gửi dữ liệu debug về máy tính.
 
 ### 4.2. Sơ đồ schematic
 
 <p align="center">
-  <img src="docs/images/b.png" width="700" alt="Sơ đồ schematic">
+  <img src="docs/images/b.png" width="700" alt="Sơ đồ schematic hệ thống radar tầm ngắn">
   <br>
-  <em>Hình 2. Sơ đồ schematic.</em>
+  <em>Hình 2. Sơ đồ schematic kết nối phần cứng.</em>
 </p>
 
-Sơ đồ schematic cần thể hiện rõ nguồn cấp, GND chung, đường tín hiệu trigger/echo của HC-SR04, đường PWM servo, đường I2C OLED, LED/buzzer và UART debug. Nếu dùng mạch chia áp hoặc level shifter cho chân echo, cần vẽ trực tiếp vào schematic.
+Sơ đồ schematic cần thể hiện:
+
+- Nguồn 5 V cấp cho HC-SR04 và servo MG90S.
+- Nguồn cấp cho STM32F429I-DISC1.
+- GND chung giữa STM32, cảm biến, servo và buzzer.
+- PG2 nối với chân TRIG của HC-SR04.
+- PG3 nhận tín hiệu ECHO qua mạch chia áp hoặc level shifter.
+- PB4/TIM3_CH1 xuất PWM điều khiển servo.
+- PC4 điều khiển buzzer.
+- PG13 và PG14 điều khiển LED trạng thái.
+- PA9 và PA10 dùng cho USART1 debug.
 
 ### 4.3. Ảnh đấu nối thực tế
 
-`[Chèn ảnh: ảnh đấu nối thực tế]`
+```text
+[Chèn ảnh: ảnh đấu nối thực tế]
+```
 
-Ảnh đấu nối thực tế nên chụp đủ board STM32F429I-DISC1, cảm biến HC-SR04 gắn trên servo, dây nguồn servo, dây trigger/echo, buzzer và OLED nếu có. Nên đánh dấu màu dây hoặc chú thích để người đọc đối chiếu được với bảng pin mapping bên dưới.
+Ảnh đấu nối nên chụp đủ:
+
+- Board STM32F429I-DISC1.
+- HC-SR04 được gắn trên servo MG90S.
+- Nguồn 5 V cho servo.
+- Dây trigger và echo.
+- Mạch chia áp echo.
+- Buzzer.
+- Dây GND chung.
 
 ### 4.4. Bảng pin mapping
 
-| Chân STM32 | Tên tín hiệu trong project | Ngoại vi / module  | Chiều tín hiệu        | Giải thích sử dụng                                                                                                                                    |
-| ---------- | -------------------------- | ------------------ | --------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
-| PB4        | `SERVO_PWM` / `TIM3_CH1`   | Servo MG90S        | STM32 -> Servo        | Xuất PWM 50 Hz để đặt góc servo. Cấu hình TIM3 dùng Prescaler = 89, Period = 19999, Pulse ban đầu = 1500, tương ứng tick khoảng 1 us và chu kỳ 20 ms. |
-| PG2        | `HCSR04_TRIG`              | HC-SR04            | STM32 -> Sensor       | Chân trigger. Firmware kéo mức cao trong 10 us để yêu cầu HC-SR04 phát burst siêu âm.                                                                 |
-| PG3        | `HCSR04_ECHO` / `EXTI3`    | HC-SR04            | Sensor -> STM32       | Chân echo. Được cấu hình ngắt ngoài EXTI3 ở cả cạnh lên và cạnh xuống để đo độ rộng xung echo.                                                        |
-| PC4        | `BUZZER`                   | Buzzer active      | STM32 -> Buzzer       | GPIO output điều khiển buzzer. Code chỉ bật cảnh báo âm thanh khi trạng thái `near_warning` được kích hoạt.                                           |
-| PG13       | `LED3_SCAN`                | LED on-board       | STM32 -> LED          | LED báo hệ thống đang quét. Trong `radar_app.c`, LED này được toggle theo chu kỳ xử lý radar.                                                         |
-| PG14       | `LED4_ALERT`               | LED on-board       | STM32 -> LED          | LED cảnh báo khi phát hiện vật thể hoặc vật thể ở vùng gần.                                                                                           |
-| PA0/WKUP   | `B1_USER`                  | Nút USER           | Button -> STM32       | Input đọc nút USER. Bấm ngắn đổi tốc độ quét; giữ từ khoảng 800 ms đổi mode quét 90/180 độ.                                                           |
-| PA8        | `I2C3_SCL`                 | OLED SH1106 / I2C3 | STM32 -> I2C bus      | Clock I2C3, cấu hình pull-up trong `.ioc`. Dự kiến dùng cho OLED SH1106 hoặc thiết bị I2C liên quan.                                                  |
-| PC9        | `I2C3_SDA`                 | OLED SH1106 / I2C3 | Hai chiều             | Data I2C3, cấu hình pull-up trong `.ioc`. TODO: xác nhận driver OLED đã được tích hợp đầy đủ hay chưa.                                                |
-| PA9        | `USART1_TX`                | UART debug         | STM32 -> UART adapter | Truyền log debug qua USART1, ví dụ trạng thái echo, khoảng cách, counter và dữ liệu UI.                                                               |
-| PA10       | `USART1_RX`                | UART debug         | UART adapter -> STM32 | Nhận UART USART1. Project hiện chủ yếu dùng TX để in debug; RX giữ cho giao tiếp UART đầy đủ.                                                         |
+| Chân STM32 | Tên tín hiệu | Module | Chiều | Giải thích |
+| --- | --- | --- | --- | --- |
+| PB4 | `SERVO_PWM` / `TIM3_CH1` | Servo MG90S | STM32 → Servo | Xuất PWM 50 Hz để điều khiển góc servo |
+| PG2 | `HCSR04_TRIG` | HC-SR04 | STM32 → Sensor | Phát xung trigger 10 us |
+| PG3 | `HCSR04_ECHO` / `EXTI3` | HC-SR04 | Sensor → STM32 | Bắt cạnh lên và cạnh xuống của echo |
+| PC4 | `BUZZER` | Buzzer active | STM32 → Buzzer | Cảnh báo khi vật nằm trong vùng gần |
+| PG13 | `LED3_SCAN` | LED3 on-board | STM32 → LED | Báo hệ thống đang quét |
+| PG14 | `LED4_ALERT` | LED4 on-board | STM32 → LED | Báo phát hiện hoặc cảnh báo gần |
+| PA0/WKUP | `B1_USER` | Nút USER | Button → STM32 | Bấm ngắn đổi tốc độ, giữ lâu đổi mode |
+| PA9 | `USART1_TX` | UART debug | STM32 → PC | Gửi log debug |
+| PA10 | `USART1_RX` | UART debug | PC → STM32 | Nhận dữ liệu UART nếu cần mở rộng |
 
-### 4.5. Nguyên tắc nối dây
+### 4.5. Mạch chia áp cho chân echo
 
-Khi lắp mạch, cần xem STM32 là mốc logic 3.3 V và các module ngoại vi là tải/nguồn tín hiệu bên ngoài. Các đường tín hiệu điều khiển từ STM32 như `TRIG`, `SERVO_PWM`, `BUZZER`, `LED3_SCAN`, `LED4_ALERT` phải đi đúng chân đã cấu hình trong `.ioc`; nếu đổi chân ngoài phần cứng mà không cập nhật CubeMX và code thì firmware sẽ không hoạt động đúng.
+HC-SR04 thường được cấp nguồn 5 V và chân ECHO có thể trả mức cao gần 5 V. STM32F429 hoạt động ở mức logic 3.3 V, vì vậy không nên nối trực tiếp echo vào PG3.
 
-Nguồn cấp cần được tách theo tải. Board STM32 có thể cấp nguồn cho logic nhẹ, nhưng servo MG90S là tải cơ điện có dòng đỉnh cao hơn nhiều so với GPIO hoặc cảm biến. Nếu servo lấy nguồn không đủ dòng, điện áp có thể sụt khi servo khởi động hoặc đổi chiều, kéo theo LCD trắng màn, board reset, servo rung hoặc số đo HC-SR04 nhiễu. Cách lắp an toàn hơn là cấp servo bằng nguồn 5 V đủ dòng, nhưng **bắt buộc nối chung GND** giữa nguồn servo và GND của STM32.
+Ví dụ mạch chia áp:
 
-Với HC-SR04, chân `TRIG` nhận mức điều khiển từ STM32 thường không phải vấn đề lớn, nhưng chân `ECHO` của nhiều module HC-SR04 xuất mức 5 V. GPIO của STM32F429 hoạt động logic 3.3 V, vì vậy cần kiểm tra module cụ thể và nên dùng mạch chia áp hoặc level shifter trước khi đưa echo vào PG3/EXTI3.
+```text
+HC-SR04 ECHO ---- R1 = 1 kΩ ----+---- PG3 / EXTI3
+                                |
+                              R2 = 2 kΩ
+                                |
+                               GND
+```
 
-Đường I2C3 cho OLED SH1106 cần có pull-up phù hợp về 3.3 V. File `.ioc` đã cấu hình pull-up cho PA8/PC9, nhưng khi dùng module OLED thực tế vẫn cần kiểm tra module có pull-up sẵn hay không và bảo đảm bus không bị kéo lên 5 V.
+Điện áp tại điểm giữa được tính gần đúng:
 
-<!-- ### 4.6. Lưu ý khi lắp mạch thực tế
+```text
+Vout = Vin × R2 / (R1 + R2)
+     = 5 × 2 / (1 + 2)
+     ≈ 3.33 V
+```
 
+### 4.6. Nguyên tắc cấp nguồn
 
-| Hiện tượng                                    | Nguyên nhân thường gặp                                                     | Cách tránh / kiểm tra                                                                                            |
-| --------------------------------------------- | -------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| LCD trắng màn hoặc board reset khi servo quay | Servo kéo dòng lớn làm sụt nguồn                                           | Dùng nguồn 5 V đủ dòng cho servo, nối GND chung, tránh lấy toàn bộ dòng servo qua chân cấp yếu                   |
-| Servo rung, giật hoặc không tới góc           | Nguồn servo yếu, dây nguồn dài, pulse biên chưa phù hợp                    | Kiểm tra nguồn bằng đồng hồ, rút ngắn dây nguồn, hiệu chỉnh `SERVO_MIN_PULSE_US` và `SERVO_MAX_PULSE_US` nếu cần |
-| Khoảng cách HC-SR04 nhảy bất thường           | Đo khi servo còn rung, vật phản xạ lệch góc, nguồn nhiễu                   | Chờ servo ổn định trước khi đo, test với mặt phẳng lớn, cố định cảm biến chắc chắn                               |
-| Không bắt được echo                           | Sai chân PG3, chưa có GND chung, echo vượt/không đạt mức logic             | Đối chiếu pin mapping, đo tín hiệu bằng oscilloscope/logic analyzer nếu có, dùng chia áp cho echo 5 V            |
-| OLED không hiển thị                           | Sai địa chỉ I2C, thiếu pull-up, bus bị kéo lên 5 V, driver chưa hoàn thiện | Scan I2C, kiểm tra PA8/PC9, xác nhận driver SH1106 trong firmware                                                |
-| UART không có log                             | Sai TX/RX, sai baudrate, chưa nối GND chung với USB-UART                   | Đối chiếu PA9/PA10, kiểm tra cấu hình USART1 và terminal                                                         |
-| LED/buzzer không phản hồi                     | Sai chân hoặc trạng thái logic ngược                                       | Đối chiếu `PC4`, `PG13`, `PG14`; test GPIO độc lập trước khi tích hợp radar                                      |
+Servo MG90S là tải cơ điện có dòng đỉnh lớn hơn nhiều so với cảm biến hoặc GPIO.
 
-Về quy trình, nên kiểm thử từng khối trước khi chạy toàn hệ thống: test PWM servo, test trigger/echo HC-SR04, test LED/buzzer, test UART debug, sau đó mới ghép với TouchGFX và FreeRTOS. Cách làm này giúp cô lập lỗi phần cứng, tránh nhầm lỗi nguồn hoặc đấu dây thành lỗi phần mềm. -->
+Không nên:
+
+- Cấp servo từ chân GPIO.
+- Dùng nguồn yếu cho cả servo và LCD.
+- Quên nối chung GND.
+- Đưa echo 5 V trực tiếp vào GPIO 3.3 V.
+
+Nên:
+
+- Cấp servo bằng nguồn 5 V đủ dòng.
+- Nối GND nguồn servo với GND STM32.
+- Bổ sung tụ lọc gần servo nếu nguồn bị sụt.
+- Cố định dây nguồn và dây tín hiệu chắc chắn.
+
+### 4.7. Lưu ý khi lắp mạch thực tế
+
+> [!WARNING]
+> Ba nguyên nhân lỗi phổ biến nhất là nguồn yếu, sai mức logic echo và đấu nhầm chân so với file `.ioc`.
+
+| Hiện tượng | Nguyên nhân thường gặp | Cách kiểm tra / khắc phục |
+| --- | --- | --- |
+| LCD trắng hoặc board reset | Servo làm sụt nguồn | Dùng nguồn 5 V đủ dòng, nối GND chung |
+| Servo rung hoặc giật | Nguồn yếu, pulse chưa phù hợp | Kiểm tra nguồn, hiệu chỉnh pulse min/max |
+| Khoảng cách nhảy | Servo còn rung, vật phản xạ lệch | Chờ servo ổn định, dùng vật phẳng |
+| Không có echo | Sai PG3, thiếu GND chung, lỗi chia áp | Kiểm tra dây và tín hiệu echo |
+| UART không có log | Sai TX/RX hoặc baudrate | Kiểm tra PA9/PA10, baudrate và GND |
+| LED/buzzer không phản hồi | Sai chân hoặc logic điều khiển | Test riêng PC4, PG13, PG14 |
+| UI không cập nhật | Queue chưa nhận được data hoặc task bị block | Kiểm tra bridge, queue và UART debug |
+
+Nên kiểm thử từng khối theo thứ tự:
+
+1. Test LED và buzzer.
+2. Test PWM servo.
+3. Test HC-SR04 khi servo đứng yên.
+4. Test UART debug.
+5. Ghép servo và HC-SR04.
+6. Ghép FreeRTOS message queue.
+7. Ghép TouchGFX.
+8. Kiểm thử toàn hệ thống.
+
+### 4.8. Video demo phần cứng và vận hành hệ thống
+
+Video dưới đây minh họa quá trình lắp ráp và vận hành thực tế của hệ thống radar tầm ngắn. Nội dung demo gồm:
+
+- Board STM32F429I-DISC1 và các kết nối phần cứng.
+- Servo MG90S quay cảm biến HC-SR04.
+- HC-SR04 đo khoảng cách vật cản.
+- Giao diện TouchGFX hiển thị góc, khoảng cách và trạng thái radar.
+- LED và buzzer phản hồi khi phát hiện vật cản gần.
+- Thay đổi tốc độ quét và chế độ quét 90°/180°.
+
+<p align="center">
+  <a href="YOUTUBE_VIDEO_URL">
+    <img src="https://img.youtube.com/vi/YOUTUBE_VIDEO_ID/maxresdefault.jpg"
+         width="700"
+         alt="Video demo hệ thống radar tầm ngắn">
+  </a>
+  <br>
+  <em>Video 1. Demo phần cứng và vận hành hệ thống radar tầm ngắn.</em>
+</p>
+
+<p align="center">
+  <a href="YOUTUBE_VIDEO_URL"><strong>▶ Xem video demo trên YouTube</strong></a>
+</p>
+
+---
 
 ## 5. NGUYÊN LÝ HOẠT ĐỘNG
 
-`[Chèn ảnh: lưu đồ hoạt động hệ thống]`
+```text
+[Chèn ảnh: lưu đồ hoạt động hệ thống]
+```
 
 ### 5.1. Luồng hoạt động tổng quát
 
-Về mặt chức năng, hệ thống hoạt động theo một vòng lặp quét lặp lại liên tục. Servo đưa cảm biến HC-SR04 tới một góc xác định, cảm biến đo khoảng cách tại hướng đó, phần mềm xử lý kết quả đo rồi cập nhật giao diện và cảnh báo. Sau đó góc quét được tăng hoặc giảm để chuyển sang hướng tiếp theo.
+Vòng xử lý chính nằm trong hàm `RadarApp_TaskLoop()` của module:
 
-Trong mã nguồn, vòng lặp này nằm chủ yếu trong hàm `RadarApp_TaskLoop()` của module [`radar_app.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_app.c). Trình tự xử lý chính:
+[`radar_app.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_app.c)
 
-1. Đọc trạng thái điều khiển từ `RadarUiBridge`: radar đang bật/tắt, tốc độ quét và chế độ quét.
-2. Nếu radar đang tắt, đưa servo về giữa, tắt buzzer/LED cảnh báo và cập nhật dữ liệu UI ở trạng thái dừng.
-3. Nếu radar đang bật, đặt servo tới góc hiện tại bằng `Servo_SetAngle()`.
-4. Chờ một khoảng ngắn theo tốc độ quét để servo kịp ổn định.
-5. Gọi `RadarApp_MeasureDistance()` để phát trigger HC-SR04 và chờ kết quả echo.
-6. Phân loại kết quả thành `SCAN`, `DETECT` hoặc `ALERT`.
-7. Cập nhật LED scan, LED alert, buzzer và struct `RadarUiData_t`.
-8. Ghi dữ liệu mới vào `RadarUiBridge_SetData()` để TouchGFX đọc và hiển thị.
-9. Tăng hoặc giảm góc quét bằng `RadarApp_AdvanceAngle()`.
+Trình tự xử lý:
 
-### 5.2. Nguyên lý đo khoảng cách bằng HC-SR04
+1. Nhận cấu hình điều khiển mới từ `RadarControlQueue`.
+2. Kiểm tra radar đang bật hay tắt.
+3. Nếu radar tắt:
+   - Đưa hệ thống về trạng thái an toàn.
+   - Tắt buzzer và LED cảnh báo.
+   - Tạo dữ liệu trạng thái dừng cho UI.
+4. Nếu radar bật:
+   - Đặt servo tới góc hiện tại.
+   - Chờ servo ổn định.
+   - Phát trigger HC-SR04.
+   - Chờ echo hoặc timeout.
+   - Tính khoảng cách.
+   - Xác định `SCAN`, `DETECT` hoặc `ALERT`.
+   - Điều khiển LED/buzzer.
+   - Gửi dữ liệu sang `RadarMessageQueue`.
+   - Tăng hoặc giảm góc quét.
 
-HC-SR04 đo khoảng cách bằng sóng siêu âm. Khi chân `TRIG` nhận một xung mức cao tối thiểu khoảng 10 us, module phát một chùm sóng siêu âm tần số khoảng 40 kHz. Sóng truyền trong không khí, gặp vật cản thì phản xạ trở lại đầu thu. Module giữ chân `ECHO` ở mức cao trong khoảng thời gian tương ứng với thời gian sóng đi từ cảm biến tới vật rồi quay lại.
+### 5.2. Nguyên lý đo HC-SR04
 
-Trong project này:
+Khi chân TRIG nhận xung mức cao tối thiểu khoảng 10 us, HC-SR04 phát một chùm sóng siêu âm khoảng 40 kHz.
 
-- `PG2 = HCSR04_TRIG`: STM32 phát xung trigger.
-- `PG3 = HCSR04_ECHO`: STM32 đo xung echo qua ngắt ngoài `EXTI3`.
-- `HCSR04_StartMeasure()` phát trigger 10 us.
-- `HCSR04_GPIO_EXTI_Callback()` bắt cạnh lên và cạnh xuống của echo.
-- DWT cycle counter được dùng để đo thời gian echo với độ phân giải micro giây.
+Khi nhận được sóng phản xạ, module tạo xung ECHO. Độ rộng xung ECHO biểu diễn thời gian sóng âm đi từ cảm biến tới vật rồi quay trở lại.
 
-Code hiện tại không polling echo bằng vòng lặp dài. Thay vào đó, cạnh lên của echo lưu thời điểm bắt đầu, cạnh xuống lưu thời điểm kết thúc, sau đó tính:
+Trong project:
+
+- `PG2 = HCSR04_TRIG`
+- `PG3 = HCSR04_ECHO`
+- `HCSR04_StartMeasure()` phát trigger.
+- `HCSR04_GPIO_EXTI_Callback()` bắt cạnh echo.
+- DWT cycle counter đo thời gian echo.
+
+Cạnh lên:
+
+```text
+Lưu thời điểm bắt đầu echo
+```
+
+Cạnh xuống:
+
+```text
+Lưu thời điểm kết thúc echo
+Tính echo_us
+```
+
+Công thức trong driver:
 
 ```c
 g_echo_us = (g_falling_cycle - g_rising_cycle) / g_cycles_per_us;
@@ -292,57 +435,82 @@ g_echo_us = (g_falling_cycle - g_rising_cycle) / g_cycles_per_us;
 
 ### 5.3. Công thức tính khoảng cách
 
-Về nguyên lý vật lý:
+Sóng âm phải đi từ cảm biến tới vật và quay về, do đó quãng đường đo được bằng hai lần khoảng cách thực.
 
 ```text
-quãng đường sóng đi được = vận tốc âm thanh x thời gian echo
+distance = speed_of_sound × echo_time / 2
 ```
 
-Tuy nhiên, thời gian echo là thời gian cho cả hành trình **đi từ cảm biến tới vật cản** và **quay từ vật cản về cảm biến**. Khoảng cách cần tìm chỉ là một chiều, nên phải chia đôi:
-
-```text
-khoảng cách = (vận tốc âm thanh x thời gian echo) / 2
-```
-
-Nếu lấy vận tốc âm thanh trong không khí xấp xỉ 343 m/s ở khoảng 20 độ C:
+Với vận tốc âm thanh xấp xỉ 343 m/s:
 
 ```text
 343 m/s = 0.0343 cm/us
-khoảng cách_cm = echo_us x 0.0343 / 2
-              ~= echo_us / 58
 ```
 
-Trong mã nguồn, `HCSR04_GetDistanceCm()` dùng đúng dạng gần đúng này:
+Suy ra:
+
+```text
+distance_cm = echo_us × 0.0343 / 2
+            ≈ echo_us / 58
+```
+
+Trong code:
 
 ```c
 distance = g_echo_us / 58U;
 ```
 
-Giá trị đo còn được kiểm tra hợp lệ theo ngưỡng cấu hình. Với project này, `RADAR_MIN_DISTANCE_CM = 2`, `RADAR_OBJECT_DETECT_CM = 50`, `RADAR_NEAR_WARNING_CM = 5`, và timeout HC-SR04 là `HCSR04_TIMEOUT_MS = 25`.
+Các ngưỡng đang sử dụng:
 
-### 5.4. Ảnh hưởng của môi trường tới kết quả đo
+| Tham số | Giá trị |
+| --- | ---: |
+| `RADAR_MIN_DISTANCE_CM` | 2 cm |
+| `RADAR_MAX_DISPLAY_CM` | 50 cm |
+| `RADAR_OBJECT_DETECT_CM` | 50 cm |
+| `RADAR_NEAR_WARNING_CM` | 5 cm |
+| `HCSR04_TIMEOUT_MS` | 25 ms |
 
-Công thức `echo_us / 58` là xấp xỉ thuận tiện, nhưng vận tốc âm thanh không cố định tuyệt đối. Nhiệt độ, độ ẩm, luồng gió và điều kiện môi trường đều có thể làm vận tốc âm thanh thay đổi. Vì vậy cùng một vật ở cùng vị trí có thể cho số đo hơi khác nhau giữa các lần đo.
+### 5.4. State của driver HC-SR04
 
-Ngoài môi trường, HC-SR04 còn bị ảnh hưởng bởi:
+Driver sử dụng các trạng thái nội bộ:
 
-- Bề mặt vật cản: mặt phẳng cứng phản xạ tốt hơn vải, xốp hoặc bề mặt hấp thụ âm.
-- Góc đặt vật: nếu sóng phản xạ lệch khỏi đầu thu, echo yếu hoặc mất.
-- Rung cơ khí: servo đang rung có thể làm hướng phát siêu âm thay đổi trong lúc đo.
-- Nguồn cấp: nguồn yếu hoặc nhiễu có thể làm echo sai, servo rung và màn hình hoạt động không ổn định.
+| State | Ý nghĩa |
+| --- | --- |
+| `IDLE` | Chưa có phép đo |
+| `WAIT_RISING` | Đang chờ cạnh lên của echo |
+| `WAIT_FALLING` | Đã nhận cạnh lên, đang chờ cạnh xuống |
+| `DONE` | Đo hoàn thành |
+| `TIMEOUT` | Không nhận đủ echo trong thời gian quy định |
+| `ERROR` | Kết quả không hợp lệ |
 
-Vì các lý do này, hệ thống nên được hiểu là mô hình radar tầm ngắn phục vụ phát hiện và minh họa, không phải thiết bị đo khoảng cách chính xác cao trong mọi điều kiện.
+State machine giúp tránh chờ vô hạn và cho phép UART debug xác định lỗi xảy ra ở giai đoạn nào.
 
-### 5.5. Nguyên lý điều khiển servo bằng PWM
+### 5.5. Ảnh hưởng của môi trường
 
-Servo MG90S được điều khiển bằng xung PWM chu kỳ khoảng 20 ms, tương đương tần số 50 Hz. Độ rộng xung mức cao quyết định góc servo. Trong project, driver [`servo_mg90s.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/servo_mg90s.c) dùng:
+Công thức `echo_us / 58` là công thức gần đúng. Kết quả thực tế bị ảnh hưởng bởi:
 
-- `Servo_Init()`: start PWM TIM3 CH1 và đưa servo về góc giữa.
-- `Servo_SetPulseUs()`: đặt độ rộng xung PWM theo micro giây.
-- `Servo_SetAngle()`: chuyển góc 0-180 độ thành pulse.
-- `Servo_Stop()`: đưa servo về góc center 90 độ.
+- Nhiệt độ và độ ẩm.
+- Luồng gió.
+- Góc đặt vật.
+- Bề mặt phản xạ.
+- Kích thước vật.
+- Rung cơ khí từ servo.
+- Nguồn cấp cảm biến.
+- Khoảng cách quá gần.
+- Echo chéo từ các bề mặt xung quanh.
 
-Các ngưỡng trong [`radar_config.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_config.h):
+HC-SR04 phù hợp cho mô hình phát hiện vật cản và đo khoảng cách tương đối, không nên coi là thiết bị đo chính xác cao trong mọi điều kiện.
+
+### 5.6. Điều khiển servo bằng PWM
+
+Servo MG90S được điều khiển bằng PWM chu kỳ khoảng 20 ms, tương ứng 50 Hz.
+
+Driver chính:
+
+- [`servo_mg90s.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/servo_mg90s.c)
+- [`servo_mg90s.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/servo_mg90s.h)
+
+Các hàm chính:
 
 | Tham số                  | Giá trị | Ý nghĩa               |
 | ------------------------ | ------: | --------------------- |
@@ -353,199 +521,330 @@ Các ngưỡng trong [`radar_config.h`](./radar_short_range_touchgfx/STM32CubeID
 | `SERVO_CENTER_PULSE_US`  | 1500 us | Pulse trung tâm       |
 | `SERVO_MAX_PULSE_US`     | 2450 us | Pulse ứng với góc lớn |
 
-Hàm `Servo_SetAngle()` nội suy tuyến tính từ góc sang độ rộng xung:
+- `Servo_Init()`
+- `Servo_SetPulseUs()`
+- `Servo_SetAngle()`
+- `Servo_Stop()`
+- `Servo_GetLastAngle()`
+- `Servo_GetLastPulseUs()`
+
+Thông số cấu hình:
+
+| Tham số | Giá trị |
+| --- | ---: |
+| Góc nhỏ nhất | 0° |
+| Góc giữa | 90° |
+| Góc lớn nhất | 180° |
+| Pulse nhỏ nhất | 550 us |
+| Pulse giữa | 1500 us |
+| Pulse lớn nhất | 2450 us |
+
+Công thức nội suy:
 
 ```text
 pulse_us = SERVO_MIN_PULSE_US
-         + angle_deg x (SERVO_MAX_PULSE_US - SERVO_MIN_PULSE_US) / 180
+         + angle_deg × (SERVO_MAX_PULSE_US - SERVO_MIN_PULSE_US) / 180
 ```
 
-### 5.6. Ý nghĩa cấu hình TIM3 cho servo
+### 5.7. Cấu hình TIM3
 
-TIM3 CH1 được gán ra chân `PB4 = SERVO_PWM`. Cấu hình trong project:
+TIM3_CH1 được đưa ra PB4.
 
-| Cấu hình TIM3 | Giá trị | Ý nghĩa                                                            |
-| ------------- | ------: | ------------------------------------------------------------------ |
-| Prescaler     |      89 | Chia clock timer để mỗi tick xấp xỉ 1 us khi timer clock là 90 MHz |
-| Period        |   19999 | Bộ đếm chạy 20000 tick, tương đương chu kỳ 20 ms                   |
-| Pulse ban đầu |    1500 | Xung cao 1500 us, thường tương ứng vị trí giữa của servo           |
+| Cấu hình | Giá trị |
+| --- | ---: |
+| Timer clock | 90 MHz |
+| Prescaler | 89 |
+| Period | 19999 |
+| Pulse ban đầu | 1500 |
 
-Với tick 1 us và chu kỳ 20000 us:
+Mỗi tick timer:
 
 ```text
-T_PWM = 20 ms
-f_PWM = 1 / 20 ms = 50 Hz
+tick = (89 + 1) / 90 MHz
+     = 1 us
 ```
 
-Đây là tần số điều khiển phổ biến cho servo hobby. Việc dùng tick 1 us cũng giúp phần mềm đặt pulse trực tiếp theo đơn vị micro giây, ví dụ `550`, `1500`, `2450`, thay vì phải quy đổi phức tạp sang giá trị compare.
+Chu kỳ PWM:
 
-### 5.7. Hiển thị lên TouchGFX và OLED
+```text
+period = (19999 + 1) × 1 us
+       = 20000 us
+       = 20 ms
+```
 
-Giao diện chính của hệ thống dùng TouchGFX trên LCD tích hợp của STM32F429I-DISC1. Luồng dữ liệu không được truyền trực tiếp từ driver cảm biến sang UI, mà đi qua lớp trung gian [`radar_ui_bridge.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_ui_bridge.c).
+Tần số:
 
-Struct trung tâm là `RadarUiData_t`, chứa các thông tin như:
+```text
+f = 1 / 20 ms
+  = 50 Hz
+```
 
-- `angle_deg`: góc quét hiện tại.
-- `distance_cm`: khoảng cách đo được.
-- `distance_valid`: kết quả đo có hợp lệ hay không.
-- `object_detected`: có vật trong vùng phát hiện hay không.
-- `near_warning`: vật có nằm trong vùng cảnh báo gần hay không.
-- `radar_status`: trạng thái `SCAN`, `DETECT`, `ALERT`.
-- `speed_mode`, `scan_mode_deg`: cấu hình tốc độ và góc quét.
-- `object_count`, `last_object_distance_cm`, `last_object_angle_deg`: thống kê phát hiện.
+Việc cấu hình tick 1 us giúp phần mềm có thể ghi trực tiếp giá trị pulse theo micro giây vào thanh ghi compare.
 
-Trong màn hình [`ScreenScanView.cpp`](./radar_short_range_touchgfx/TouchGFX/gui/src/screenscan_screen/ScreenScanView.cpp), TouchGFX đọc dữ liệu bằng `RadarUiBridge_GetData()` rồi:
+### 5.8. Hiển thị dữ liệu trên TouchGFX
 
-- Cập nhật text góc quét.
-- Cập nhật text khoảng cách hoặc hiển thị `--- cm` nếu đo không hợp lệ.
-- Hiển thị trạng thái `SCAN`, `DETECT`, `ALERT`.
-- Đổi sweep xanh/đỏ theo trạng thái phát hiện.
-- Tính vị trí target dot từ góc và khoảng cách.
+Giao diện chính sử dụng LCD tích hợp của STM32F429I-DISC1.
 
-`[Chèn ảnh: giao diện màn hình radar]`
+Dữ liệu radar không được ghi trực tiếp từ driver cảm biến vào widget TouchGFX. Module `radar_ui_bridge.c/h` làm cầu nối giữa:
 
-Với OLED SH1106, repo hiện có cấu hình I2C3 trên `PA8/PC9` và struct `RadarUiData_t` có trường `oled_connected`. Tuy nhiên trong mã nguồn user hiện chưa thấy driver SH1106 riêng; `radar_app.c` đang gán `oled_connected = 0`. Vì vậy phần README chỉ mô tả OLED ở mức phần cứng/kế hoạch tích hợp, chưa khẳng định nội dung hiển thị OLED đã hoàn thiện.
+```text
+RadarTask viết bằng C
+          ↕
+RadarUiBridge + FreeRTOS queue
+          ↕
+TouchGFX View viết bằng C++
+```
 
-### 5.8. Vai trò buzzer và LED cảnh báo
+Dữ liệu lõi gồm:
 
-Module [`buzzer_led.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/buzzer_led.c) điều khiển:
+- `angle_deg`
+- `distance_cm`
+- `distance_valid`
+- `object_detected`
+- `near_warning`
+- `radar_status`
+- `object_count`
+- `last_object_distance_cm`
+- `last_object_angle_deg`
+- `buzzer_on`
+- `led3_on`
+- `led4_on`
 
-- `PC4 = BUZZER`
-- `PG13 = LED3_SCAN`
-- `PG14 = LED4_ALERT`
+Cấu hình điều khiển gồm:
 
-Trong `RadarApp_TaskLoop()`, `LED3_SCAN` được toggle để báo hệ thống đang quét. Hàm `Alert_Update(detected, near_warning)` xử lý cảnh báo:
+- `radar_enabled`
+- `scan_mode_deg`
+- `speed_mode`
 
-- Không phát hiện vật: tắt LED alert và buzzer.
-- Có vật trong vùng phát hiện: bật LED alert, chưa bật buzzer.
-- Vật ở vùng rất gần (`near_warning`): bật LED alert và toggle buzzer theo chu kỳ khoảng 120 ms.
+Trong `ScreenScanView.cpp`, UI cập nhật:
 
-Cách phân cấp này giúp người dùng phân biệt giữa phát hiện vật bình thường và tình huống vật ở quá gần cần cảnh báo mạnh hơn.
+- Góc quét.
+- Khoảng cách.
+- Trạng thái.
+- Tia quét xanh hoặc đỏ.
+- Vị trí target dot.
+- Trạng thái phát hiện vật cản.
+
+```text
+[Chèn ảnh: giao diện màn hình radar]
+```
+
+### 5.9. Vai trò buzzer và LED
+
+Module:
+
+- [`buzzer_led.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/buzzer_led.c)
+- [`buzzer_led.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/buzzer_led.h)
+
+Pin:
+
+```text
+PC4  = BUZZER
+PG13 = LED3_SCAN
+PG14 = LED4_ALERT
+```
+
+Logic:
+
+| Trạng thái | LED scan | LED alert | Buzzer |
+| --- | --- | --- | --- |
+| Không có vật | Hoạt động | Tắt | Tắt |
+| Có vật trong vùng phát hiện | Hoạt động | Bật | Tắt |
+| Vật ở vùng rất gần | Hoạt động | Bật | Kêu theo chu kỳ |
+
+---
 
 ## 6. TÍCH HỢP HỆ THỐNG
 
-### 6.1. Kiến trúc phần mềm tổng quát
+### 6.1. Kiến trúc tổng quát
 
-Project được chia thành nhiều lớp để tách phần cứng, logic xử lý và giao diện. Cách tổ chức này giúp việc debug từng khối dễ hơn, đồng thời giảm phụ thuộc trực tiếp giữa TouchGFX C++ và driver C.
+Project được chia thành các lớp:
 
-| Lớp               | File / module chính                                                                        | Vai trò                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------ | ---------------------------------------------------------------------------------- |
-| Cấu hình nền tảng | `Core/Src/main.c`, `.ioc`                                                                  | Khởi tạo clock, GPIO, TIM, I2C, UART, LTDC, DMA2D, FMC/SDRAM, FreeRTOS             |
-| Driver phần cứng  | `hcsr04.c`, `servo_mg90s.c`, `buzzer_led.c`, `radar_debug.c`                               | Làm việc trực tiếp với GPIO, EXTI, PWM, UART                                       |
-| Cấu hình ứng dụng | `radar_config.h`, `radar_types.h`                                                          | Chứa ngưỡng khoảng cách, tham số servo, scan mode, speed mode và struct dữ liệu UI |
-| Logic ứng dụng    | `radar_app.c`                                                                              | Điều phối quét, đo khoảng cách, phát hiện vật, cảnh báo và cập nhật dữ liệu        |
-| Cầu nối UI        | `radar_ui_bridge.c`                                                                        | Chia sẻ dữ liệu giữa radar task C và TouchGFX C++ bằng critical section ngắn       |
-| UI TouchGFX       | `ScreenHomeView.cpp`, `ScreenScanView.cpp`, `ScreenSettingsView.cpp`, `ScreenInfoView.cpp` | Hiển thị và điều khiển radar từ giao diện                                          |
-| Middleware        | FreeRTOS CMSIS v2, TouchGFX, HAL                                                           | Lập lịch task, giao diện đồ họa, abstraction ngoại vi STM32                        |
+| Lớp | File / module | Vai trò |
+| --- | --- | --- |
+| Nền tảng | `main.c`, `.ioc` | Khởi tạo clock, GPIO, timer, UART, LTDC, DMA2D, SDRAM và FreeRTOS |
+| Driver | `hcsr04.c`, `servo_mg90s.c`, `buzzer_led.c`, `radar_debug.c` | Điều khiển phần cứng |
+| Cấu hình | `radar_config.h`, `radar_types.h` | Chứa ngưỡng, mode và kiểu dữ liệu |
+| Ứng dụng | `radar_app.c` | Điều phối toàn bộ hoạt động radar |
+| Giao tiếp task/UI | `radar_ui_bridge.c` | Message queue và snapshot dữ liệu |
+| Giao diện | Các file `Screen...View.cpp` | Hiển thị dữ liệu và nhận thao tác |
+| Middleware | FreeRTOS, TouchGFX, HAL | Lập lịch, queue, đồ họa và abstraction phần cứng |
 
-### 6.2. Luồng dữ liệu cảm biến - xử lý - hiển thị - cảnh báo
+### 6.2. Các task chính
 
-Luồng dữ liệu chính:
+| Task | Hàm | Vai trò |
+| --- | --- | --- |
+| `defaultTask` | `StartDefaultTask()` | Đọc nút USER |
+| `GUI_Task` | `TouchGFX_Task()` | Chạy giao diện TouchGFX |
+| `radarTask` | `StartRadarTask()` | Khởi tạo và chạy `RadarApp_TaskLoop()` |
+
+### 6.3. Luồng dữ liệu cảm biến
 
 ```text
 HC-SR04
-  -> EXTI3/DWT trong hcsr04.c
+  -> EXTI3 callback
+  -> hcsr04.c
   -> RadarApp_MeasureDistance()
   -> RadarApp_TaskLoop()
-  -> RadarUiData_t
-  -> RadarUiBridge_SetData()
-  -> TouchGFX ScreenScan/Info/Settings
-  -> LCD radar UI
-
-RadarApp_TaskLoop()
-  -> Alert_Update()
-  -> LED3_SCAN / LED4_ALERT / BUZZER
+  -> RadarCoreData_t
+  -> RadarMessageQueue
+  -> RadarUiBridge_GetData()
+  -> TouchGFX
+  -> LCD
 ```
 
-Diễn giải theo từng bước:
+Luồng cảnh báo:
 
-1. `RadarApp_TaskLoop()` đặt servo tới góc hiện tại bằng `Servo_SetAngle()`.
-2. Sau thời gian chờ ngắn, `RadarApp_MeasureDistance()` gọi `HCSR04_StartMeasure()`.
-3. HC-SR04 phản hồi bằng xung echo trên PG3.
-4. `HAL_GPIO_EXTI_Callback()` trong `main.c` chuyển xử lý sang `HCSR04_GPIO_EXTI_Callback()`.
-5. `hcsr04.c` tính `echo_us`, sau đó `HCSR04_GetDistanceCm()` trả khoảng cách cm nếu hợp lệ.
-6. `radar_app.c` so sánh khoảng cách với các ngưỡng `RADAR_OBJECT_DETECT_CM` và `RADAR_NEAR_WARNING_CM`.
-7. Kết quả được đóng gói vào `RadarUiData_t`.
-8. TouchGFX đọc dữ liệu qua `RadarUiBridge_GetData()` để cập nhật text, sweep và target dot.
-9. `Alert_Update()` cập nhật LED/buzzer theo trạng thái phát hiện.
+```text
+RadarApp_TaskLoop()
+  -> detected / near_warning
+  -> Alert_Update()
+  -> PG13 / PG14 / PC4
+```
 
-### 6.3. Task, loop và trạng thái trong chương trình
+### 6.4. FreeRTOS message queue
 
-Trong `main.c`, project tạo ba luồng xử lý chính:
+Project sử dụng hai queue.
 
-| Task / loop   | Nguồn                | Vai trò                                                                     |
-| ------------- | -------------------- | --------------------------------------------------------------------------- |
-| `defaultTask` | `StartDefaultTask()` | Đọc nút USER PA0. Bấm ngắn đổi speed mode, giữ lâu đổi scan mode 90/180 độ. |
-| `GUI_Task`    | `TouchGFX_Task()`    | Chạy TouchGFX, render giao diện và xử lý màn hình.                          |
-| `radarTask`   | `StartRadarTask()`   | Gọi `RadarApp_Init()` rồi lặp vô hạn `RadarApp_TaskLoop()`.                 |
+#### RadarMessageQueue
 
-`RadarApp_TaskLoop()` có thể xem như state machine mức ứng dụng, dù không được viết dưới dạng bảng state riêng. Các trạng thái chính nằm trong `RadarUiData_t`:
+Truyền dữ liệu từ radar task sang UI:
 
-| Trạng thái            | Ý nghĩa                              | Điều kiện chính                                               |
-| --------------------- | ------------------------------------ | ------------------------------------------------------------- |
-| `RADAR_STATUS_SCAN`   | Đang quét, chưa phát hiện vật hợp lệ | Không có vật trong ngưỡng phát hiện                           |
-| `RADAR_STATUS_DETECT` | Phát hiện vật trong vùng quan sát    | Khoảng cách hợp lệ và `distance_cm <= RADAR_OBJECT_DETECT_CM` |
-| `RADAR_STATUS_ALERT`  | Vật nằm quá gần                      | Khoảng cách hợp lệ và `distance_cm <= RADAR_NEAR_WARNING_CM`  |
+```text
+RadarTask
+  -> RadarUiBridge_SetData()
+  -> RadarMessageHandle
+  -> RadarUiBridge_GetData()
+  -> TouchGFX
+```
 
-Ngoài trạng thái radar, phần mềm còn quản lý:
+Kiểu dữ liệu chính:
 
-- `radar_enabled`: radar bật/tắt.
-- `scan_mode_deg`: quét 90 độ hoặc 180 độ.
-- `speed_mode`: `SLOW`, `MED`, `FAST`.
-- `g_angle`, `g_direction`: góc quét hiện tại và hướng quét.
-- `g_prev_detected`: dùng để tăng `object_count` khi có vật mới xuất hiện.
+```c
+RadarCoreData_t
+```
 
-### 6.4. Vai trò của timer và ngắt
+Queue này chứa dữ liệu đo và trạng thái hệ thống.
 
-| Thành phần   | Vai trò trong project                                                                                                                                                                                                           |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `TIM3`       | Timer PWM điều khiển servo MG90S trên kênh CH1/PB4. Đây là timer quan trọng cho cơ cấu quét.                                                                                                                                    |
-| `EXTI3`      | Ngắt ngoài trên PG3 để bắt cạnh lên/xuống của echo HC-SR04. Đây là cơ chế đo echo hiện đang được code sử dụng.                                                                                                                  |
-| DWT `CYCCNT` | Bộ đếm chu kỳ CPU dùng trong `hcsr04.c` để tạo delay micro giây cho trigger và đo độ rộng xung echo.                                                                                                                            |
-| `TIM2`       | Được cấu hình input capture trong `.ioc` và `main.c`, Prescaler = 89, Period = 0xFFFFFFFF. Tuy nhiên `hcsr04.c` hiện ghi rõ không dùng TIM2 input capture nữa; hàm `HCSR04_TIM_IC_CaptureCallback()` chỉ giữ stub `(void)htim`. |
-| `TIM6`       | Được dùng làm time base HAL trong project CubeMX, phục vụ tick hệ thống.                                                                                                                                                        |
+#### RadarControlQueue
 
-Điểm cần lưu ý là project có dấu vết cấu hình TIM2 input capture, nhưng logic đo HC-SR04 hiện tại đã chuyển sang EXTI3 + DWT. Vì vậy khi mô tả hoạt động thực tế của firmware, cần ưu tiên mô tả EXTI3/DWT; TIM2 chỉ nên được nhắc là ngoại vi còn cấu hình, chưa phải đường đo chính trong code hiện tại.
+Truyền lệnh điều khiển từ UI hoặc button task sang radar task:
 
-### 6.5. Tích hợp TouchGFX với logic C
+```text
+TouchGFX / ButtonTask
+  -> RadarUiBridge_SetRadarEnabled()
+  -> RadarUiBridge_SetSpeedMode()
+  -> RadarUiBridge_SetScanMode()
+  -> RadarControlQueueHandle
+  -> RadarApp_TaskLoop()
+```
 
-TouchGFX chạy ở phía C++, trong khi phần lớn logic radar và driver viết bằng C. Repo giải quyết việc trao đổi dữ liệu bằng `radar_ui_bridge.c/h`. Bridge này giữ một biến static kiểu `RadarUiData_t` và dùng critical section ngắn bằng `__disable_irq()` / `__enable_irq()` khi copy dữ liệu.
+Kiểu dữ liệu chính:
 
-Cách làm này giúp:
+```c
+RadarControlConfig_t
+```
 
-- Radar task cập nhật dữ liệu đo mà không cần biết chi tiết widget TouchGFX.
-- TouchGFX đọc dữ liệu hiển thị mà không gọi trực tiếp driver cảm biến.
-- Các biến điều khiển như `radar_enabled`, `speed_mode`, `scan_mode_deg` được giữ lại khi `RadarApp_TaskLoop()` cập nhật sensor data, tránh lỗi UI vừa set trạng thái mới nhưng task ghi đè bằng dữ liệu cũ.
+### 6.5. Snapshot và critical section
 
-Ở màn `ScreenScanView`, `handleTickEvent()` không cập nhật UI ở mọi frame mà cứ 3 tick mới gọi `updateRadarUi()`. Đây là cách giảm tải cập nhật text/texture trong khi vẫn giữ giao diện đủ mượt.
+Ngoài queue, bridge giữ snapshot gần nhất:
 
-`[Chèn ảnh: sơ đồ luồng dữ liệu phần mềm]`
+```c
+static RadarCoreData_t g_radar_core;
+static RadarControlConfig_t g_radar_control;
+```
+
+Snapshot giúp UI vẫn có dữ liệu để hiển thị khi chưa nhận được message mới.
+
+Các thao tác copy snapshot được bảo vệ bằng:
+
+```c
+__disable_irq();
+...
+__enable_irq();
+```
+
+Critical section này chỉ tồn tại trong thời gian rất ngắn để tránh:
+
+- UI đọc struct khi radar task đang copy dở.
+- Radar task đọc cấu hình khi UI đang cập nhật dở.
+- Dữ liệu trong cùng một snapshot bị trộn giữa giá trị cũ và mới.
+
+> [!NOTE]
+> Cơ chế truyền dữ liệu chính là FreeRTOS message queue. Việc tạm khóa ngắt chỉ dùng để bảo vệ snapshot dữ liệu dùng chung.
+
+### 6.6. Trạng thái ứng dụng
+
+| Trạng thái | Ý nghĩa | Điều kiện |
+| --- | --- | --- |
+| `RADAR_STATUS_SCAN` | Đang quét, chưa có vật hợp lệ | Không có vật trong ngưỡng |
+| `RADAR_STATUS_DETECT` | Đã phát hiện vật | Khoảng cách hợp lệ và ≤ ngưỡng detect |
+| `RADAR_STATUS_ALERT` | Vật quá gần | Khoảng cách hợp lệ và ≤ ngưỡng near |
+
+Các biến điều khiển:
+
+```text
+radar_enabled
+scan_mode_deg
+speed_mode
+g_angle
+g_direction
+g_prev_detected
+```
+
+### 6.7. Vai trò timer và ngắt
+
+| Thành phần | Vai trò |
+| --- | --- |
+| TIM3 | PWM servo MG90S |
+| EXTI3 | Bắt cạnh echo HC-SR04 |
+| DWT CYCCNT | Đo thời gian echo và delay micro giây |
+| TIM2 | Cấu hình input capture dự phòng/cũ |
+| TIM6 | Time base của HAL |
+| USART1 | Gửi log debug |
+
+TIM2 vẫn có trong cấu hình nhưng driver HC-SR04 hiện tại sử dụng EXTI3 kết hợp DWT. Khi mô tả firmware thực tế, cần ưu tiên cơ chế EXTI3 + DWT.
+
+### 6.8. TouchGFX cập nhật theo tick
+
+Trong `ScreenScanView`, `handleTickEvent()` không nhất thiết cập nhật toàn bộ widget ở mọi frame. UI gọi `updateRadarUi()` theo chu kỳ định sẵn để:
+
+- Giảm số lần cập nhật text.
+- Giảm số lần invalidate widget.
+- Hạn chế tải đồ họa.
+- Vẫn bảo đảm giao diện đủ mượt.
+
+```text
+[Chèn ảnh: sơ đồ luồng dữ liệu phần mềm]
+```
+
+---
 
 ## 7. KIẾN TRÚC PHẦN MỀM
 
-Các module phần mềm được tách theo trách nhiệm rõ ràng: phần khởi tạo hệ thống nằm trong `Core`, các driver và logic radar nằm trong `STM32CubeIDE/Application/User`, còn giao diện người dùng nằm trong `TouchGFX/gui`. Bảng dưới đây tóm tắt các file nên đọc khi cần hiểu hoặc mở rộng project.
+| File / module | Vai trò |
+| --- | --- |
+| `Core/Src/main.c` | Khởi tạo HAL, ngoại vi, FreeRTOS task, queue và EXTI callback |
+| `radar_config.h` | Chứa thông số khoảng cách, servo, mode, speed và UI |
+| `radar_types.h` | Khai báo enum và struct dữ liệu radar |
+| `radar_app.c/h` | Điều phối quét, đo, cảnh báo và truyền dữ liệu |
+| `hcsr04.c/h` | Driver HC-SR04 dùng EXTI + DWT |
+| `servo_mg90s.c/h` | Driver servo dùng TIM3_CH1 |
+| `buzzer_led.c/h` | Driver LED và buzzer |
+| `radar_ui_bridge.c/h` | Queue và snapshot giữa radar task với TouchGFX |
+| `radar_debug.c/h` | In log qua USART1 |
+| `ScreenHomeView.cpp` | Màn hình Home |
+| `ScreenScanView.cpp` | Màn hình radar chính |
+| `ScreenSettingsView.cpp` | Chọn speed và mode |
+| `ScreenInfoView.cpp` | Hiển thị thống kê |
 
-| File / module            | Vai trò                                                            |
-| ------------------------ | ------------------------------------------------------------------ |
-| `Core/Src/main.c`        | Khởi tạo HAL, ngoại vi, FreeRTOS task và callback EXTI.            |
-| `radar_app.c/h`          | Điều phối logic quét, đo, phát hiện, cảnh báo và cập nhật UI data. |
-| `hcsr04.c/h`             | Driver đo khoảng cách bằng HC-SR04 qua EXTI + DWT.                 |
-| `servo_mg90s.c/h`        | Driver điều khiển servo bằng PWM TIM3_CH1.                         |
-| `buzzer_led.c/h`         | Điều khiển buzzer và LED trạng thái.                               |
-| `radar_ui_bridge.c/h`    | Vùng dữ liệu chia sẻ giữa radar task C và TouchGFX C++.            |
-| `radar_debug.c/h`        | In log debug qua USART1.                                           |
-| `ScreenScanView.cpp`     | Màn hình radar chính, hiển thị sweep, target, góc, khoảng cách.    |
-| `ScreenSettingsView.cpp` | Chọn tốc độ quét và chế độ quét.                                   |
-| `ScreenInfoView.cpp`     | Hiển thị thông tin thống kê.                                       |
-| `ScreenHomeView.cpp`     | Màn hình Home, dừng radar khi quay về Home.                        |
+---
 
 ## 8. ĐẶC TẢ HÀM / MODULE QUAN TRỌNG
 
-Phần này đặc tả các module và hàm quan trọng theo mã nguồn thực tế trong thư mục [`STM32CubeIDE/Application/User`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User) và phần UI trong [`TouchGFX/gui/src`](./radar_short_range_touchgfx/TouchGFX/gui/src). Các hàm được chọn theo vai trò trong luồng đo khoảng cách, điều khiển servo, cảnh báo và cập nhật giao diện.
+### 8.1. Driver HC-SR04
 
-### 8.1. Nhóm đo khoảng cách HC-SR04
-
-File chính:
+File:
 
 - [`hcsr04.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/hcsr04.h)
 - [`hcsr04.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/hcsr04.c)
@@ -655,9 +954,9 @@ uint8_t HCSR04_GetDistanceCm(uint16_t *distance_cm);
 uint32_t HCSR04_GetLastEchoUs(void);
 ```
 
-### 8.2. Nhóm điều khiển servo MG90S
+### 8.2. Driver servo MG90S
 
-File chính:
+File:
 
 - [`servo_mg90s.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/servo_mg90s.h)
 - [`servo_mg90s.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/servo_mg90s.c)
@@ -749,9 +1048,9 @@ Các tham số cấu hình quan trọng của servo được định nghĩa tron
 | `SERVO_CENTER_PULSE_US` |           `1500` | Độ rộng xung PWM tại vị trí trung tâm (90°).                                 |
 | `SERVO_MAX_PULSE_US`    |           `2450` | Độ rộng xung PWM lớn nhất, tương ứng với góc quay lớn nhất của servo. (180°) |
 
-### 8.3. Nhóm điều khiển buzzer và LED
+### 8.3. Driver buzzer và LED
 
-File chính:
+File:
 
 - [`buzzer_led.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/buzzer_led.h)
 - [`buzzer_led.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/buzzer_led.c)
@@ -828,14 +1127,12 @@ Logic cảnh báo hiện tại được chia thành ba mức như sau:
 | Phát hiện vật       | `detected = 1`, `near_warning = 0` | Bật       | Tắt                         |
 | Cảnh báo gần        | `detected = 1`, `near_warning = 1` | Bật       | Nhấp nháy khoảng mỗi 120 ms |
 
-### 8.4. Nhóm logic điều phối radar
+### 8.4. Logic radar
 
-File chính:
+File:
 
 - [`radar_app.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_app.h)
 - [`radar_app.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_app.c)
-- [`radar_config.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_config.h)
-- [`radar_types.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_types.h)
 
 Module `radar_app` là trung tâm điều phối toàn bộ hệ thống radar. Module chịu trách nhiệm quản lý trạng thái hoạt động, điều khiển servo, thực hiện phép đo khoảng cách, phân loại kết quả, cập nhật dữ liệu cho giao diện và điều khiển các thiết bị cảnh báo.
 
@@ -999,12 +1296,36 @@ Radar hỗ trợ hai chế độ vùng quét.
 | `90°`  | Quét từ 45° đến 135°.        |
 | `180°` | Quét toàn bộ từ 0° đến 180°. |
 
-### 8.5. Nhóm bridge dữ liệu UI
+| Hàm | Chức năng |
+| --- | --- |
+| `RadarUiBridge_Init()` | Khởi tạo snapshot lõi và control |
+| `RadarUiBridge_SetData()` | Gửi `RadarCoreData_t` vào radar message queue |
+| `RadarUiBridge_GetData()` | Nhận message mới và trả snapshot cho UI |
+| `RadarUiBridge_IsControlConfigChange()` | Radar task kiểm tra cấu hình mới |
+| `RadarUiBridge_SetRadarEnabled()` | Cập nhật bật/tắt radar và gửi control queue |
+| `RadarUiBridge_SetSpeedMode()` | Cập nhật tốc độ và gửi control queue |
+| `RadarUiBridge_SetScanMode()` | Cập nhật mode và gửi control queue |
+| `RadarUiBridge_NextSpeedMode()` | Chuyển vòng tốc độ |
 
-File chính:
+Cấu trúc dữ liệu:
 
-- [`radar_ui_bridge.h`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_ui_bridge.h)
-- [`radar_ui_bridge.c`](./radar_short_range_touchgfx/STM32CubeIDE/Application/User/radar_ui_bridge.c)
+```c
+typedef struct
+{
+    uint16_t angle_deg;
+    uint16_t distance_cm;
+    uint8_t distance_valid;
+    uint8_t object_detected;
+    uint8_t near_warning;
+    uint8_t radar_status;
+    uint16_t object_count;
+    uint16_t last_object_distance_cm;
+    uint16_t last_object_angle_deg;
+    uint8_t buzzer_on;
+    uint8_t led3_on;
+    uint8_t led4_on;
+} RadarCoreData_t;
+```
 
 Module UI Bridge đóng vai trò cầu nối giữa radar task và giao diện TouchGFX. Nhóm hàm này quản lý dữ liệu dùng chung, đồng bộ các tham số cấu hình và cung cấp cơ chế trao đổi dữ liệu an toàn giữa các task.
 
@@ -1097,9 +1418,12 @@ void RadarUiBridge_SetScanMode(uint8_t scan_mode_deg);
 void RadarUiBridge_NextSpeedMode(void);
 ```
 
-### 8.6. Nhóm cập nhật giao diện TouchGFX
+> [!NOTE]
+> Đoạn struct trên mô tả các trường được sử dụng trong báo cáo. Nếu source còn chứa trường dự phòng không gắn với phần cứng thực tế, nhóm nên xóa hoặc không sử dụng trước khi nộp bản cuối.
 
-File chính:
+### 8.6. Giao diện TouchGFX
+
+File:
 
 - [`ScreenHomeView.cpp`](./radar_short_range_touchgfx/TouchGFX/gui/src/screenhome_screen/ScreenHomeView.cpp)
 - [`ScreenScanView.cpp`](./radar_short_range_touchgfx/TouchGFX/gui/src/screenscan_screen/ScreenScanView.cpp)
@@ -1178,188 +1502,320 @@ Các màn hình TouchGFX đảm nhiệm các chức năng chính như sau.
 
 ## 9. KẾT QUẢ
 
-### 9.1. Mô tả kết quả đạt được
+### 9.1. Kết quả đạt được
 
-Dựa trên mã nguồn trong repo, project đã hình thành đầy đủ khung chức năng của một hệ thống radar tầm ngắn: có driver đo HC-SR04, driver servo MG90S, logic điều phối radar, cảnh báo LED/buzzer, bridge dữ liệu và giao diện TouchGFX nhiều màn hình. Các file build/debug trong `STM32CubeIDE/Debug` cũng cho thấy project đã được build trong môi trường STM32CubeIDE.
+Project đã triển khai:
 
-Các kết quả thực nghiệm như ảnh demo, video demo và bảng sai số đo chưa có sẵn trong repo. Vì vậy phần dưới đây tạo sẵn khung để nhóm bổ sung minh chứng khi hoàn thiện báo cáo nộp.
+- Driver HC-SR04.
+- Driver servo MG90S.
+- LED và buzzer cảnh báo.
+- Logic radar 90°/180°.
+- Ba mức tốc độ quét.
+- FreeRTOS task.
+- Hai FreeRTOS message queue.
+- UART debug.
+- Giao diện TouchGFX nhiều màn hình.
+- Hiển thị sweep và target dot.
 
-### 9.2. Chức năng đã hoàn thành theo mã nguồn
+### 9.2. Chức năng theo mã nguồn
 
-| Chức năng                    | Trạng thái theo repo     | Minh chứng trong mã nguồn                     | Ghi chú                                                          |
-| ---------------------------- | ------------------------ | --------------------------------------------- | ---------------------------------------------------------------- |
-| Khởi tạo board và ngoại vi   | Đã có                    | `Core/Src/main.c`, `.ioc`                     | GPIO, TIM2, TIM3, I2C3, USART1, LTDC, DMA2D, FMC/SDRAM, FreeRTOS |
-| Đo HC-SR04 bằng trigger/echo | Đã có code               | `hcsr04.c`                                    | Dùng PG2/PG3, EXTI3 + DWT                                        |
-| Điều khiển servo MG90S       | Đã có code               | `servo_mg90s.c`                               | PWM TIM3_CH1 trên PB4                                            |
-| Quét 90/180 độ               | Đã có code               | `radar_config.h`, `radar_app.c`               | 90 độ: 45-135; 180 độ: 0-180                                     |
-| Tốc độ SLOW/MED/FAST         | Đã có code               | `radar_config.h`, `RadarApp_SetSpeedMode()`   | Step/delay cấu hình trong `radar_config.h`                       |
-| Phân loại SCAN/DETECT/ALERT  | Đã có code               | `radar_types.h`, `RadarApp_TaskLoop()`        | Detect <= 50 cm, near warning <= 5 cm                            |
-| LED scan và LED alert        | Đã có code               | `buzzer_led.c`, `radar_app.c`                 | PG13 toggle scan, PG14 alert                                     |
-| Buzzer cảnh báo gần          | Đã có code               | `Alert_Update()`                              | Toggle khoảng 120 ms khi `near_warning`                          |
-| TouchGFX radar UI            | Đã có code               | `ScreenScanView.cpp`                          | Hiển thị góc, khoảng cách, status, sweep, target dot             |
-| Settings UI                  | Đã có code               | `ScreenSettingsView.cpp`                      | Chọn speed và mode                                               |
-| Info UI                      | Đã có code               | `ScreenInfoView.cpp`                          | Hiển thị mode, speed, range, last angle, object count            |
-| OLED SH1106                  | Chưa đủ dữ liệu kết luận | I2C3 có cấu hình, chưa thấy driver OLED riêng | Để TODO nếu chưa có demo thực tế                                 |
+| Chức năng | Trạng thái | Minh chứng |
+| --- | --- | --- |
+| Khởi tạo board và ngoại vi | Đã triển khai | `main.c`, `.ioc` |
+| Đo HC-SR04 | Đã triển khai | `hcsr04.c` |
+| Điều khiển servo | Đã triển khai | `servo_mg90s.c` |
+| Quét 90°/180° | Đã triển khai | `radar_app.c`, `radar_config.h` |
+| SLOW/MED/FAST | Đã triển khai | `RadarApp_SetSpeedMode()` |
+| SCAN/DETECT/ALERT | Đã triển khai | `radar_types.h`, `radar_app.c` |
+| LED scan/alert | Đã triển khai | `buzzer_led.c` |
+| Buzzer cảnh báo | Đã triển khai | `Alert_Update()` |
+| TouchGFX radar UI | Đã triển khai | `ScreenScanView.cpp` |
+| Settings UI | Đã triển khai | `ScreenSettingsView.cpp` |
+| Info UI | Đã triển khai | `ScreenInfoView.cpp` |
+| Radar message queue | Đã triển khai | `radar_ui_bridge.c` |
+| Control message queue | Đã triển khai | `radar_ui_bridge.c` |
+| UART debug | Đã triển khai | `radar_debug.c` |
 
 ### 9.3. Hình ảnh giao diện
 
-`[Chèn ảnh: giao diện màn hình Home]`
+```text
+[Chèn ảnh: giao diện màn hình Home]
+```
 
-`[Chèn ảnh: giao diện màn hình Scan khi đang quét]`
+```text
+[Chèn ảnh: giao diện màn hình Scan khi đang quét]
+```
 
-`[Chèn ảnh: giao diện màn hình Scan khi phát hiện vật cản]`
+```text
+[Chèn ảnh: giao diện màn hình Scan khi phát hiện vật cản]
+```
 
-`[Chèn ảnh: giao diện màn hình Settings]`
+```text
+[Chèn ảnh: giao diện màn hình Settings]
+```
 
-`[Chèn ảnh: giao diện màn hình Info]`
-
-`[Chèn ảnh: OLED SH1106 nếu đã hoàn thiện]`
+```text
+[Chèn ảnh: giao diện màn hình Info]
+```
 
 ### 9.4. Video demo
 
-`[Chèn video: demo sản phẩm]`
+```text
+[Chèn video: demo tổng thể sản phẩm]
+```
 
-`[Chèn video: demo servo quét và HC-SR04 phát hiện vật cản]`
+```text
+[Chèn video: servo quét và HC-SR04 phát hiện vật cản]
+```
 
-`[Chèn video: demo đổi chế độ quét 90/180 độ và đổi tốc độ SLOW/MED/FAST]`
+```text
+[Chèn video: đổi chế độ 90°/180° và tốc độ SLOW/MED/FAST]
+```
 
-`[Chèn video: demo cảnh báo bằng LED/buzzer khi vật ở gần]`
+```text
+[Chèn video: cảnh báo LED/buzzer]
+```
 
 ### 9.5. Bảng kiểm thử cơ bản
 
-| Nhóm kiểm thử        | Cách kiểm thử                                                | Kết quả mong đợi                              | Kết quả thực tế |
-| -------------------- | ------------------------------------------------------------ | --------------------------------------------- | --------------- |
-| Servo PWM            | Vào màn Scan, quan sát servo quay theo góc                   | Servo quét trong vùng 90/180 độ theo mode     | TODO            |
-| HC-SR04 trigger/echo | Đưa vật phẳng trước cảm biến, quan sát distance trên UI/UART | Có khoảng cách hợp lệ, không timeout liên tục | TODO            |
-| Detect threshold     | Đặt vật trong khoảng <= 50 cm                                | UI chuyển `DETECT`, target dot xuất hiện      | TODO            |
-| Near warning         | Đặt vật trong khoảng <= 5 cm                                 | UI chuyển `ALERT`, LED alert bật, buzzer kêu  | TODO            |
-| Speed mode           | Bấm nút UI hoặc bấm ngắn USER                                | Speed đổi giữa SLOW/MED/FAST                  | TODO            |
-| Scan mode            | Bấm nút UI hoặc giữ lâu USER                                 | Mode đổi 90/180 độ                            | TODO            |
-| Home stop            | Quay về Home                                                 | Radar dừng, output về trạng thái an toàn      | TODO            |
-| UART debug           | Mở terminal USART1                                           | Có log angle, distance, echo, counter         | TODO            |
-| OLED                 | Quan sát OLED SH1106                                         | TODO theo trạng thái driver thực tế           | TODO            |
+| Kiểm thử | Cách thực hiện | Kết quả mong đợi | Kết quả thực tế |
+| --- | --- | --- | --- |
+| Servo PWM | Vào màn Scan | Servo quét theo mode | TODO |
+| HC-SR04 | Đưa vật phẳng trước cảm biến | Có khoảng cách hợp lệ | TODO |
+| Detect | Đặt vật trong phạm vi ≤ 50 cm | UI chuyển `DETECT` | TODO |
+| Alert | Đặt vật trong phạm vi ≤ 5 cm | UI chuyển `ALERT`, buzzer kêu | TODO |
+| Speed | Bấm UI hoặc bấm ngắn USER | Đổi SLOW/MED/FAST | TODO |
+| Scan mode | Bấm UI hoặc giữ USER | Đổi 90°/180° | TODO |
+| Home | Quay về Home | Radar dừng an toàn | TODO |
+| UART | Mở terminal | Có angle, distance, echo và counter | TODO |
+| Radar queue | Theo dõi UI khi radar chạy | UI nhận dữ liệu mới | TODO |
+| Control queue | Đổi mode/speed từ UI | Radar task nhận cấu hình | TODO |
 
-### 9.6. Bảng đo thực nghiệm cần bổ sung
+### 9.6. Bảng đo thực nghiệm
 
-Repo hiện chưa có số liệu đo thực nghiệm. Nhóm nên đo ở nhiều điều kiện khác nhau: vật phẳng, vật lệch góc, vật nhỏ, khoảng cách gần/xa, servo đứng yên và servo đang quét.
+| Điều kiện | Khoảng cách thực (cm) | Khoảng cách hiển thị (cm) | Sai số (cm) | Nhận xét |
+| --- | ---: | ---: | ---: | --- |
+| Vật phẳng, servo đứng yên | TODO | TODO | TODO | TODO |
+| Vật phẳng, quét chậm | TODO | TODO | TODO | TODO |
+| Vật phẳng, quét nhanh | TODO | TODO | TODO | TODO |
+| Vật đặt lệch góc | TODO | TODO | TODO | TODO |
+| Vật nhỏ | TODO | TODO | TODO | TODO |
+| Vùng cảnh báo gần | TODO | TODO | TODO | TODO |
 
-| Điều kiện thử                    | Khoảng cách thực (cm) | Khoảng cách hiển thị (cm) | Sai số (cm) | Nhận xét |
-| -------------------------------- | --------------------: | ------------------------: | ----------: | -------- |
-| Vật phẳng, servo đứng yên        |                  TODO |                      TODO |        TODO | TODO     |
-| Vật phẳng, servo đang quét chậm  |                  TODO |                      TODO |        TODO | TODO     |
-| Vật phẳng, servo đang quét nhanh |                  TODO |                      TODO |        TODO | TODO     |
-| Vật lệch góc so với cảm biến     |                  TODO |                      TODO |        TODO | TODO     |
-| Vật nhỏ hoặc bề mặt hấp thụ âm   |                  TODO |                      TODO |        TODO | TODO     |
-| Khoảng cách gần vùng cảnh báo    |                  TODO |                      TODO |        TODO | TODO     |
+---
 
 ## 10. ĐÁNH GIÁ THỰC TẾ VÀ GIỚI HẠN
 
 ### 10.1. Nhận xét chung
 
-Hệ thống đáp ứng tốt vai trò một mô hình radar tầm ngắn phục vụ học tập: có quét góc, đo khoảng cách, hiển thị trực quan và cảnh báo. Tuy nhiên, không nên hiểu đây là radar theo nghĩa RF hoặc thiết bị đo khoảng cách có độ chính xác ổn định trong mọi môi trường. Độ tin cậy phụ thuộc đồng thời vào cảm biến siêu âm, cơ cấu servo, nguồn cấp, cách gá cơ khí và cách lấy mẫu khi quét.
+Hệ thống đáp ứng tốt vai trò mô hình radar tầm ngắn phục vụ học tập. Sản phẩm có cơ cấu quét, đo khoảng cách, giao diện trực quan và cảnh báo.
 
-### 10.2. Giới hạn của HC-SR04
+Tuy nhiên, đây không phải radar RF và không phải thiết bị đo khoảng cách chính xác cao trong mọi môi trường.
 
-HC-SR04 có thông số danh định tương đối đẹp: tầm đo thường được nêu khoảng 2-400 cm, trigger 10 us, sóng siêu âm 40 kHz và độ chính xác lý tưởng khoảng 3 mm. Trong thực tế, các con số này chỉ đạt gần đúng trong điều kiện thuận lợi: vật phản xạ tốt, đặt vuông góc, nguồn ổn định và môi trường ít nhiễu.
+### 10.2. Giới hạn HC-SR04
 
-Các yếu tố ảnh hưởng mạnh tới kết quả:
+Thông số danh định phổ biến của HC-SR04:
 
-- Góc phản xạ: vật nghiêng có thể làm sóng phản xạ lệch khỏi đầu thu.
-- Bề mặt vật: vật mềm, xốp, vải hoặc bề mặt hấp thụ âm cho echo yếu hơn.
-- Vùng chết gần cảm biến: khoảng cách quá gần có thể không ổn định.
-- Nhiễu cơ khí: servo rung làm hướng phát/thu thay đổi trong lúc đo.
-- Nguồn cấp: nguồn yếu hoặc nhiễu có thể làm xung echo sai hoặc timeout.
-- Môi trường: nhiệt độ và độ ẩm làm vận tốc âm thanh thay đổi, kéo theo sai số.
+- Tầm đo khoảng 2–400 cm.
+- Trigger tối thiểu khoảng 10 us.
+- Tần số siêu âm khoảng 40 kHz.
+- Độ chính xác lý tưởng có thể được công bố ở mức vài milimét.
 
-Vì vậy kết quả đo nên được đánh giá bằng bảng thực nghiệm thay vì chỉ dựa vào thông số danh định.
+Trong thực tế, sai số phụ thuộc vào:
 
-### 10.3. Giới hạn của servo MG90S
+- Góc phản xạ.
+- Vật liệu bề mặt.
+- Kích thước vật.
+- Rung servo.
+- Nguồn cấp.
+- Nhiệt độ và độ ẩm.
+- Nhiễu từ môi trường.
+- Cách gá cảm biến.
 
-MG90S có stall torque tham khảo khoảng 1.8 kgcm ở 4.8 V và 2.2 kgcm ở 6 V, tốc độ khoảng 0.1 s/60 độ. Đây là thông số quan trọng để chọn cơ cấu, nhưng **stall torque không phải tải làm việc liên tục**. Nếu gá cảm biến nặng, lệch tâm hoặc để servo giữ tải ở biên lâu, servo có thể nóng, rung, tiêu thụ dòng lớn và làm sụt nguồn.
+Do đó cần đánh giá bằng số liệu đo thực nghiệm thay vì chỉ dựa vào datasheet.
 
-Khi quét nhanh, servo chưa kịp ổn định tại góc mới thì hệ thống đã đo khoảng cách. Khi đó hướng cảm biến có thể lệch so với góc hiển thị, làm target dot trên UI không phản ánh đúng vị trí vật. Đây là lý do trong `RadarApp_TaskLoop()` có delay ngắn theo speed mode trước khi đo, nhưng nếu cơ khí rung nhiều thì delay này vẫn có thể chưa đủ.
+### 10.3. Giới hạn servo MG90S
 
-### 10.4. Giới hạn của board STM32F429I-DISC1
+MG90S có stall torque tham khảo khoảng:
 
-STM32F429I-DISC1 thuận lợi cho bài toán giao diện vì có LCD, SDRAM, LTDC và TouchGFX. Đổi lại, nhiều chân đã được sử dụng cho LCD, SDRAM và các ngoại vi tích hợp. Quỹ chân trống thực tế bị hạn chế, nên pin mapping phải cẩn thận để không xung đột.
+- 1.8 kg·cm ở 4.8 V.
+- 2.2 kg·cm ở khoảng 6 V.
 
-Việc chạy TouchGFX, FreeRTOS, đo echo, điều khiển servo và cập nhật cảnh báo cùng lúc cũng làm hệ thống phức tạp hơn một bài đo cảm biến đơn giản. Nếu cập nhật UI quá dày hoặc blocking trong task quá lâu, cảm giác giao diện và chu kỳ quét đều có thể bị ảnh hưởng.
+Stall torque không phải tải làm việc liên tục.
 
-### 10.5. Nhận xét kỹ thuật thực tế
+Ví dụ, nếu cánh tay đòn dài 1 cm thì lực lý thuyết tại trạng thái stall có thể tương đương khoảng 1.8–2.2 kgf. Nếu cánh tay đòn dài 2 cm, lực giảm còn khoảng một nửa.
 
-Điểm khó nhất của hệ thống không nằm ở từng module riêng lẻ, mà nằm ở tích hợp. HC-SR04 cần timing micro giây, servo tạo nhiễu nguồn và rung cơ khí, TouchGFX cần tài nguyên đồ họa, FreeRTOS chia thời gian cho nhiều task. Khi một lỗi xuất hiện, ví dụ khoảng cách nhảy hoặc màn hình reset, nguyên nhân có thể nằm ở nguồn, dây nối, mức logic, task timing hoặc thuật toán đọc echo.
+Trong sử dụng thực tế:
 
-Do đó cách đánh giá hợp lý là kiểm thử theo lớp: phần cứng nguồn trước, sau đó GPIO/servo, sau đó HC-SR04 đứng yên, sau đó quét servo, cuối cùng mới ghép UI và cảnh báo.
+- Không nên để servo giữ tải gần stall lâu.
+- Gá HC-SR04 nên cân bằng và nhẹ.
+- Không để servo kẹt ở biên.
+- Cần hiệu chỉnh pulse min/max.
+- Cần nguồn đủ dòng.
+
+### 10.4. Ảnh hưởng của chuyển động servo
+
+Nếu đo ngay khi servo còn đang di chuyển:
+
+- Góc thực tế có thể khác góc hiển thị.
+- Hướng phát siêu âm có thể thay đổi trong lúc đo.
+- Echo dễ bị mất hoặc nhiễu.
+- Target dot có thể xuất hiện sai vị trí.
+
+Vì vậy cần có thời gian chờ servo ổn định trước khi phát trigger.
+
+### 10.5. Giới hạn STM32F429I-DISC1
+
+Board có LCD và SDRAM tích hợp, thuận lợi cho TouchGFX nhưng nhiều chân đã được sử dụng.
+
+Hệ thống phải chạy đồng thời:
+
+- GUI task.
+- Radar task.
+- Button task.
+- EXTI echo.
+- PWM servo.
+- UART debug.
+- Message queue.
+- DMA2D/LTDC.
+
+Nếu một task blocking quá lâu hoặc UI cập nhật quá nhiều, độ mượt và tốc độ quét có thể bị ảnh hưởng.
+
+### 10.6. Giới hạn message queue và snapshot
+
+Message queue giúp luồng dữ liệu rõ ràng hơn nhưng vẫn cần chú ý:
+
+- Queue có thể đầy nếu bên gửi nhanh hơn bên nhận.
+- UI có thể hiển thị dữ liệu cũ nếu không đọc queue đủ thường xuyên.
+- Với dữ liệu trạng thái liên tục, đôi khi chỉ cần giữ mẫu mới nhất thay vì mọi mẫu.
+- Critical section toàn cục cần được giữ thật ngắn.
+- Không nên thực hiện xử lý nặng trong khi đang khóa ngắt.
+
+---
 
 ## 11. KHÓ KHĂN VÀ KINH NGHIỆM RÚT RA
 
-### 11.1. Khó khăn / lỗi thường gặp / giải pháp
+### 11.1. Khó khăn và giải pháp
 
-| Hiện tượng                                     | Nguyên nhân                                                                           | Cách khắc phục                                                                                               |
-| ---------------------------------------------- | ------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ | --- |
-| Màn hình trắng, board reset khi servo quay     | Nguồn 5 V yếu, servo kéo dòng đỉnh lớn, GND không chắc                                | Dùng nguồn riêng đủ dòng cho servo, nối GND chung, kiểm tra sụt áp khi servo đổi hướng                       |
-| Servo rung hoặc quay không đều                 | Nguồn yếu, dây nguồn dài, pulse min/max chưa phù hợp, cơ khí gá lệch                  | Rút ngắn dây nguồn, tăng ổn định nguồn, chỉnh `SERVO_MIN_PULSE_US`/`SERVO_MAX_PULSE_US`, gá cảm biến cân hơn |
-| Khoảng cách HC-SR04 nhiễu khi đang quét        | Servo chưa ổn định, cảm biến rung, vật phản xạ lệch góc                               | Tăng thời gian chờ trước khi đo, giảm tốc độ quét, cố định cảm biến chắc hơn, test với vật phẳng             |
-| Không bắt được echo                            | Sai dây PG3, không chung GND, echo 5 V chưa xử lý đúng, cảm biến không được cấp nguồn | Đối chiếu pin mapping, đo chân echo bằng logic analyzer/oscilloscope nếu có, dùng chia áp hoặc level shifter |
-| Số đo lúc có lúc không                         | Nguồn nhiễu, dây jumper lỏng, echo yếu do bề mặt vật                                  | Kiểm tra lại dây, dùng nguồn ổn định, thử vật phẳng lớn đặt vuông góc                                        |
-| UI TouchGFX không phản ánh đúng dữ liệu mới    | Bridge dữ liệu chưa đồng bộ, update UI quá nhanh/chậm, task radar đang bị block       | Đọc/ghi qua `RadarUiBridge`, cập nhật UI theo tick hợp lý, tránh blocking dài trong radar task               |
-| Radar tự dừng hoặc không chạy khi vào màn Scan | `radar_enabled` bị ghi đè hoặc chưa gọi `RadarApp_Start()`                            | Kiểm tra `ScreenScanView::setupScreen()`, `RadarUiBridge_SetData()` và log UART                              |     |
+| Hiện tượng | Nguyên nhân khả dĩ | Giải pháp |
+| --- | --- | --- |
+| Màn hình trắng hoặc reset | Servo làm sụt nguồn | Dùng nguồn servo riêng, GND chung |
+| Servo rung | Nguồn yếu hoặc pulse sai | Kiểm tra nguồn và hiệu chỉnh pulse |
+| Khoảng cách nhảy | Servo rung hoặc phản xạ kém | Tăng settle time, dùng vật phẳng |
+| Không có echo | Sai dây hoặc mức logic | Kiểm tra PG3 và mạch chia áp |
+| Có rising nhưng không có falling | Echo kẹt cao hoặc callback lỗi | Kiểm tra tín hiệu và EXTI |
+| Timeout liên tục | Không có vật phản xạ hoặc dây lỗi | Kiểm tra trigger, echo và GND |
+| UI không đổi | Queue không có message mới | Kiểm tra `osMessageQueuePut/Get` |
+| UI trễ | Queue tồn nhiều mẫu cũ | Giảm tần số gửi hoặc chỉ giữ mẫu mới |
+| Speed/mode không đổi | Control queue không được nhận | Kiểm tra `RadarUiBridge_IsControlConfigChange()` |
+| Buzzer kêu sai | Điều kiện `near_warning` sai | Log distance và trạng thái alert |
+| UART không có dữ liệu | Sai baudrate hoặc TX | Kiểm tra PA9 và terminal |
 
 ### 11.2. Kinh nghiệm rút ra
 
-- **Tách bài toán thành từng lớp để test.** Không nên ghép TouchGFX, servo và HC-SR04 ngay từ đầu. Nên test PWM servo, test trigger/echo, test UART log, rồi mới tích hợp radar task và UI.
-- **Nguồn là phần phải kiểm tra sớm.** Servo nhỏ như MG90S vẫn có thể tạo dòng đỉnh đủ lớn để làm sụt áp, gây reset hoặc nhiễu cảm biến. Nối GND chung và cấp nguồn servo đúng cách quan trọng không kém code.
-- **Không tin tuyệt đối vào thông số danh định của cảm biến.** HC-SR04 cho kết quả tốt khi điều kiện phản xạ thuận lợi, nhưng dễ sai khi vật nghiêng, mềm, nhỏ hoặc khi cảm biến rung.
-- **Đo khi servo đã ổn định.** Nếu đo ngay lúc servo đang di chuyển, khoảng cách có thể đúng nhưng góc tương ứng trên UI lại sai, hoặc echo bị mất do hướng phát thay đổi.
-- **Bridge dữ liệu giúp UI và logic độc lập hơn.** `RadarUiBridge` là điểm trung gian hợp lý giữa C task và TouchGFX C++. Nhờ đó UI không cần biết chi tiết driver, còn radar task không cần thao tác trực tiếp widget.
-- **Log UART rất hữu ích khi hệ thống phức tạp.** Khi UI chỉ hiện `--- cm`, log echo/counter giúp phân biệt lỗi cảm biến, lỗi timeout, lỗi dây echo hay lỗi xử lý UI.
-- **Pin mapping phải được quản lý như tài liệu kỹ thuật.** Với board tích hợp LCD/SDRAM như STM32F429I-DISC1, đổi chân tùy tiện rất dễ xung đột ngoại vi. README, `.ioc` và `main.h` cần thống nhất.
+- **Kiểm thử từng module riêng.** Không ghép toàn bộ hệ thống ngay từ đầu.
+- **Kiểm tra nguồn trước khi sửa thuật toán.** Nhiều lỗi cảm biến thực chất do sụt áp.
+- **Chờ servo ổn định trước khi đo.**
+- **Không tin tuyệt đối thông số danh định.**
+- **Dùng UART counter để xác định lỗi trigger/rising/falling/timeout.**
+- **Tách dữ liệu lõi và dữ liệu điều khiển.**
+- **Message queue phù hợp cho giao tiếp giữa các task.**
+- **Snapshot giúp UI luôn có trạng thái gần nhất để hiển thị.**
+- **Critical section phải ngắn.**
+- **Bridge giúp UI không phụ thuộc trực tiếp vào driver phần cứng.**
+- **Pin mapping phải thống nhất giữa README, `.ioc`, `main.h` và mạch thật.**
+- **Chỉ mô tả các phần cứng đã thực sự lắp và kiểm thử.**
+
+---
 
 ## 12. HƯỚNG PHÁT TRIỂN
 
-Các hướng phát triển dưới đây được chia theo mức độ ưu tiên thực tế. Một số mục có thể làm ngay trên nền code hiện tại, một số mục cần bổ sung phần cứng hoặc thay đổi kiến trúc phần mềm.
-
 ### 12.1. Cải thiện độ ổn định đo
 
-| Hướng phát triển                                 | Lợi ích                            | Ghi chú triển khai                                                                   |
-| ------------------------------------------------ | ---------------------------------- | ------------------------------------------------------------------------------------ |
-| Lọc số đo bằng median filter hoặc moving average | Giảm nhiễu do echo nhảy bất thường | Nên giữ raw value để debug, chỉ lọc giá trị hiển thị/quyết định cảnh báo             |
-| Loại bỏ outlier theo ngưỡng nhảy khoảng cách     | Tránh target dot nhảy mạnh trên UI | Có thể dùng `HCSR04_MAX_JUMP_CM` đã khai báo trong `radar_config.h` nếu muốn mở rộng |
-| Tăng thời gian chờ servo ổn định trước khi đo    | Giảm nhiễu do rung cơ khí          | Cần cân bằng giữa độ ổn định và tốc độ quét                                          |
-| Hiệu chuẩn pulse servo theo cơ khí thực tế       | Giảm kẹt biên, giảm rung           | Điều chỉnh `SERVO_MIN_PULSE_US` và `SERVO_MAX_PULSE_US`                              |
+| Hướng phát triển | Lợi ích |
+| --- | --- |
+| Median filter | Loại bỏ số đo đột biến |
+| Moving average | Làm mượt dữ liệu |
+| Giới hạn độ nhảy | Tránh target dot nhảy mạnh |
+| Tăng settle time | Giảm nhiễu do servo |
+| Đo nhiều lần mỗi góc | Cải thiện độ tin cậy |
+| Hiệu chỉnh nhiệt độ | Cải thiện công thức vận tốc âm thanh |
 
-### 12.2. Cải thiện giao diện và trải nghiệm sử dụng
+### 12.2. Cải thiện giao diện
 
-- Cho phép chỉnh ngưỡng `DETECT` và `ALERT` trực tiếp trên màn Settings.
-- Hiển thị thêm chất lượng phép đo: valid/timeout, echo us, số lần timeout.
-- Thêm chế độ pause/resume radar thay vì chỉ start khi vào Scan và stop khi về Home.
-- Bổ sung biểu đồ hoặc log các lần phát hiện gần nhất trên màn Info.
-- Hoàn thiện hiển thị OLED SH1106 nếu nhóm muốn có màn phụ độc lập với LCD TouchGFX.
+- Cho phép chỉnh ngưỡng `DETECT` và `ALERT`.
+- Hiển thị số lần timeout.
+- Hiển thị echo micro giây.
+- Thêm pause/resume.
+- Lưu lịch sử phát hiện.
+- Hiển thị biểu đồ khoảng cách.
+- Hiển thị trạng thái queue.
+- Thêm trang chẩn đoán cảm biến.
 
-### 12.3. Cải thiện phần cứng và an toàn mạch
+### 12.3. Cải thiện phần cứng
 
-- Bổ sung mạch chia áp hoặc level shifter rõ ràng cho đường echo HC-SR04.
-- Dùng nguồn 5 V riêng đủ dòng cho servo, có GND chung với STM32.
-- Cố định cơ khí cảm biến chắc hơn để giảm rung khi servo đổi hướng.
-- Thiết kế PCB nhỏ hoặc shield đấu nối để tránh dây jumper lỏng.
-- Bổ sung tụ lọc gần servo và cảm biến nếu nguồn bị nhiễu.
+- Dùng level shifter chuyên dụng cho echo.
+- Dùng nguồn servo riêng.
+- Bổ sung tụ lọc.
+- Thiết kế PCB/shield.
+- Làm giá đỡ cảm biến chắc chắn hơn.
+- Giảm khối lượng và độ lệch tâm trên trục servo.
 
-### 12.4. Cải thiện kiến trúc phần mềm
+### 12.4. Cải thiện phần mềm
 
-- Nếu dữ liệu UI mở rộng, cân nhắc dùng FreeRTOS mutex hoặc queue thay cho critical section thủ công.
-- Tách phần state machine radar thành module rõ hơn để dễ test.
-- Bổ sung unit test hoặc test giả lập cho các hàm tính góc, map tọa độ target và lọc số đo.
-- Ghi log qua UART theo mức debug để tránh spam terminal khi demo.
+- Dùng queue length phù hợp.
+- Sử dụng cơ chế overwrite/mailbox cho dữ liệu mới nhất.
+- Tách state machine thành module riêng.
+- Bổ sung mutex hoặc critical section theo API FreeRTOS.
+- Dùng `taskENTER_CRITICAL()` thay cho thao tác khóa ngắt trực tiếp nếu phù hợp.
+- Bổ sung unit test cho hàm map góc và tọa độ.
+- Phân loại mức log UART.
+- Giảm log khi demo để tránh blocking.
+
+---
 
 ## 13. TÀI LIỆU THAM KHẢO
 
-| Nhóm tài liệu    | Tài liệu / nguồn tham khảo                                              | Vai trò                                                     |
-| ---------------- | ----------------------------------------------------------------------- | ----------------------------------------------------------- |
-| STM32 MCU        | STMicroelectronics, `STM32F429xx Datasheet`                             | Thông số vi điều khiển STM32F429ZIT6                        |
-| STM32 peripheral | STMicroelectronics, `RM0090 Reference manual - STM32F4 series`          | Tham khảo GPIO, EXTI, TIM, I2C, USART, DMA, FMC             |
-| Board            | STMicroelectronics, user manual cho STM32F429I-DISC1 / STM32F429I-DISCO | Pinout, LCD, SDRAM, ST-LINK, phần cứng tích hợp trên board  |
-| TouchGFX         | STMicroelectronics, tài liệu TouchGFX và X-CUBE-TOUCHGFX                | Cấu trúc GUI task, asset, màn hình, render UI               |
-| HC-SR04          | Datasheet/tài liệu module HC-SR04                                       | Trigger 10 us, echo, nguyên lý đo siêu âm, tầm đo danh định |
-| MG90S            | Datasheet/tài liệu servo MG90S                                          | PWM servo, torque, tốc độ, điện áp hoạt động                |
-| SH1106           | Datasheet/tài liệu SH1106 OLED controller                               | Controller OLED 132x64, giao tiếp I2C/SPI tùy module        |
-| Repo mẫu báo cáo | <https://github.com/neittien0110/ProjectSample>                         | Tham khảo khung báo cáo theo yêu cầu môn học                |
+| Nhóm tài liệu | Tài liệu | Vai trò |
+| --- | --- | --- |
+| STM32 MCU | STMicroelectronics, STM32F429xx Datasheet | Thông số MCU |
+| STM32 peripheral | STMicroelectronics, RM0090 Reference Manual | GPIO, EXTI, TIM, USART, DMA, FMC |
+| Board | STM32F429I-DISC1 User Manual | LCD, SDRAM, pinout và ST-LINK |
+| TouchGFX | TouchGFX Documentation | Thiết kế và cập nhật giao diện |
+| FreeRTOS | FreeRTOS/CMSIS-RTOS2 Documentation | Task và message queue |
+| HC-SR04 | HC-SR04 technical documentation | Trigger, echo và công thức đo |
+| MG90S | TowerPro MG90S specifications | PWM, tốc độ và torque |
+| Repo mẫu | <https://github.com/neittien0110/ProjectSample> | Tham khảo cấu trúc báo cáo |
+| Repo tham khảo | <https://github.com/nguyenha-meiii/RadarMonitor> | Tham khảo ý tưởng radar |
+
+> [!NOTE]
+> Trước khi nộp, nhóm nên bổ sung URL chính xác hoặc tài liệu PDF chính thức cho các datasheet đã sử dụng.
+
+---
+
+## 14. KẾT LUẬN
+
+Đề tài đã xây dựng được một mô hình radar tầm ngắn trên STM32F429I-DISC1 sử dụng HC-SR04, servo MG90S, LED, buzzer, UART debug, FreeRTOS và TouchGFX.
+
+Hệ thống có khả năng:
+
+- Quét theo góc.
+- Đo khoảng cách.
+- Phát hiện vật cản.
+- Cảnh báo vật ở gần.
+- Thay đổi tốc độ.
+- Thay đổi chế độ 90°/180°.
+- Hiển thị dữ liệu trực quan trên LCD tích hợp.
+
+Firmware được chia thành driver phần cứng, logic ứng dụng, bridge dữ liệu và lớp giao diện. Hai FreeRTOS message queue được sử dụng để truyền dữ liệu radar và cấu hình điều khiển giữa các task. Snapshot dữ liệu được bảo vệ bằng critical section ngắn để tránh đọc/ghi struct không nhất quán.
+
+Điểm quan trọng khi đánh giá sản phẩm là nhìn nhận đúng giới hạn thực tế. HC-SR04 phụ thuộc vào góc và bề mặt phản xạ, servo có thể gây rung và nhiễu nguồn, còn STM32F429I-DISC1 phải đồng thời xử lý nhiều ngoại vi và giao diện đồ họa.
+
+Trước khi nộp bản cuối, nhóm cần bổ sung:
+
+- Ảnh đấu nối thực tế.
+- Ảnh các màn hình TouchGFX.
+- Video demo.
+- Bảng đo sai số.
+- Phân công đầy đủ cho các thành viên.
+- Sơ đồ khối và schematic đúng với phần cứng thực tế.
