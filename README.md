@@ -126,7 +126,7 @@ IT4210-HE-NHUNG/
 | Thành viên | Công việc chính | Ghi chú |
 | --- | --- | --- |
 | Nguyễn Minh Giang | TODO: Điền phần việc thực hiện | TODO |
-| Bùi Trung Hoàng | Xử lý Điều khiển Servo |  |
+| Bùi Trung Hoàng | Xử lý Điều khiển Servo | Servo |
 | Phạm Ngọc Hưng | TODO: Điền phần việc thực hiện | TODO |
 | Khương Anh Tài | TODO: Điền phần việc thực hiện | TODO |
 >>>>>>> 9aad221 (readme)
