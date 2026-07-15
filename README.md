@@ -1408,29 +1408,18 @@ Project đã triển khai:
 
 ### 9.5. Bảng kiểm thử cơ bản
 
-| Kiểm thử      | Cách thực hiện                | Kết quả mong đợi                    | Kết quả thực tế |
-| ------------- | ----------------------------- | ----------------------------------- | --------------- |
-| Servo PWM     | Vào màn Scan                  | Servo quét theo mode                | TODO            |
-| HC-SR04       | Đưa vật phẳng trước cảm biến  | Có khoảng cách hợp lệ               | TODO            |
-| Detect        | Đặt vật trong phạm vi ≤ 50 cm | UI chuyển `DETECT`                  | TODO            |
-| Alert         | Đặt vật trong phạm vi ≤ 5 cm  | UI chuyển `ALERT`, buzzer kêu       | TODO            |
-| Speed         | Bấm UI hoặc bấm ngắn USER     | Đổi SLOW/MED/FAST                   | TODO            |
-| Scan mode     | Bấm UI hoặc giữ USER          | Đổi 90°/180°                        | TODO            |
-| Home          | Quay về Home                  | Radar dừng an toàn                  | TODO            |
-| UART          | Mở terminal                   | Có angle, distance, echo và counter | TODO            |
-| Radar queue   | Theo dõi UI khi radar chạy    | UI nhận dữ liệu mới                 | TODO            |
-| Control queue | Đổi mode/speed từ UI          | Radar task nhận cấu hình            | TODO            |
-
-### 9.6. Bảng đo thực nghiệm
-
-| Điều kiện                 | Khoảng cách thực (cm) | Khoảng cách hiển thị (cm) | Sai số (cm) | Nhận xét |
-| ------------------------- | --------------------: | ------------------------: | ----------: | -------- |
-| Vật phẳng, servo đứng yên |                  TODO |                      TODO |        TODO | TODO     |
-| Vật phẳng, quét chậm      |                  TODO |                      TODO |        TODO | TODO     |
-| Vật phẳng, quét nhanh     |                  TODO |                      TODO |        TODO | TODO     |
-| Vật đặt lệch góc          |                  TODO |                      TODO |        TODO | TODO     |
-| Vật nhỏ                   |                  TODO |                      TODO |        TODO | TODO     |
-| Vùng cảnh báo gần         |                  TODO |                      TODO |        TODO | TODO     |
+| Kiểm thử      | Cách thực hiện                | Kết quả mong đợi                    |
+| ------------- | ----------------------------- | ----------------------------------- |
+| Servo PWM     | Vào màn Scan                  | Servo quét theo mode                |
+| HC-SR04       | Đưa vật phẳng trước cảm biến  | Có khoảng cách hợp lệ               |
+| Detect        | Đặt vật trong phạm vi ≤ 50 cm | UI chuyển `DETECT`                  |
+| Alert         | Đặt vật trong phạm vi ≤ 5 cm  | UI chuyển `ALERT`, buzzer kêu       |
+| Speed         | Bấm UI hoặc bấm ngắn USER     | Đổi SLOW/MED/FAST                   |
+| Scan mode     | Bấm UI hoặc giữ USER          | Đổi 90°/180°                        |
+| Home          | Quay về Home                  | Radar dừng an toàn                  |
+| UART          | Mở terminal                   | Có angle, distance, echo và counter |
+| Radar queue   | Theo dõi UI khi radar chạy    | UI nhận dữ liệu mới                 |
+| Control queue | Đổi mode/speed từ UI          | Radar task nhận cấu hình            |
 
 ---
 
