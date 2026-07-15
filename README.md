@@ -112,24 +112,12 @@ IT4210-HE-NHUNG/
 
 ### 2.2. Phân công công việc
 
-<<<<<<< HEAD
-| Thành viên         | Công việc chính                                                                                             | Ghi chú        |
-| ------------------ | ----------------------------------------------------------------------------------------------------------- | -------------- |
-| Nguyễn Minh Giang  | TODO: Nhóm bổ sung theo phân công thực tế                                                                   | TODO           |
-| Bùi Trung Hoàng    | Điều khiển Servo                                                                   | Servo          |
-| **Phạm Ngọc Hưng** | **Thiết kế giao diện TouchGFX; xây dựng các màn Home, Scan, Settings, Info; tích hợp dữ liệu radar lên UI** | Phụ trách UI   |
-| **Khương Anh Tài** | **Xây dựng mạch; tích hợp logic UI và refator đoạn code thừa**                                              | Phần cứng & UI |
-=======
-> [!IMPORTANT]
-> Repo hiện chưa có dữ liệu đủ chắc để kết luận chi tiết phân công từng thành viên. Bảng dưới đây được tạo sẵn để nhóm điền trước khi nộp báo cáo.
-
-| Thành viên | Công việc chính | Ghi chú |
-| --- | --- | --- |
-| Nguyễn Minh Giang | TODO: Điền phần việc thực hiện | TODO |
-| Bùi Trung Hoàng | Xử lý Điều khiển Servo | Servo |
-| Phạm Ngọc Hưng | TODO: Điền phần việc thực hiện | TODO |
-| Khương Anh Tài | TODO: Điền phần việc thực hiện | TODO |
->>>>>>> 9aad221 (readme)
+| Thành viên         | Công việc chính                                                                                             | Ghi chú      |
+| ------------------ | ----------------------------------------------------------------------------------------------------------- | ------------ |
+| Nguyễn Minh Giang  | TODO: Nhóm bổ sung theo phân công thực tế                                                                   | TODO         |
+| Bùi Trung Hoàng    | Điều khiển Servo                                                                                            | Servo        |
+| **Phạm Ngọc Hưng** | **Thiết kế giao diện TouchGFX; xây dựng các màn Home, Scan, Settings, Info; tích hợp dữ liệu radar lên UI** | Phụ trách UI |
+| Khương Anh Tài     | Điều khiển HC-SR04                                                                                          | HC_SR04      |
 
 ## 3. MÔI TRƯỜNG HOẠT ĐỘNG
 
