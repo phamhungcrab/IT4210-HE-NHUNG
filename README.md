@@ -116,7 +116,7 @@ IT4210-HE-NHUNG/
 | ------------------ | ----------------------------------------------------------------------------------------------------------- | ------------ |
 | Nguyễn Minh Giang  | Board điều khiển STM32                                                                                      | STM32        |
 | Bùi Trung Hoàng    | Điều khiển Servo                                                                                            | Servo        |
-| **Phạm Ngọc Hưng** | **Thiết kế giao diện TouchGFX; xây dựng các màn Home, Scan, Settings, Info; tích hợp dữ liệu radar lên UI** | Phụ trách UI |
+| Phạm Ngọc Hưng     | Thiết kế giao diện TouchGFX                                                                                 | STM32        |
 | Khương Anh Tài     | Điều khiển HC-SR04                                                                                          | HC_SR04      |
 
 ## 3. MÔI TRƯỜNG HOẠT ĐỘNG
