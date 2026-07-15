@@ -550,10 +550,6 @@ Trong `ScreenScanView.cpp`, UI cập nhật:
 - Vị trí target dot.
 - Trạng thái phát hiện vật cản.
 
-```text
-[Chèn ảnh: giao diện màn hình radar]
-```
-
 ### 5.9. Vai trò buzzer và LED
 
 Module:
