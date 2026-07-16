@@ -1,6 +1,19 @@
 # Radar tầm ngắn - STM32F429I-DISC1 + TouchGFX
 
 > Báo cáo bài tập lớn môn Hệ nhúng: xây dựng mô hình radar tầm ngắn sử dụng STM32F429I-DISC1, cảm biến siêu âm HC-SR04, servo MG90S và giao diện TouchGFX.
+<p align="center">
+  <img src="docs/images/4.3.jpg"
+       width="44%"
+       alt="Mô hình phần cứng radar tầm ngắn STM32F429I-DISC1">
+  &nbsp;&nbsp;
+  <img src="docs/images/9.3.2.jpg"
+       width="44%"
+       alt="Giao diện TouchGFX radar khi phát hiện vật cản">
+</p>
+
+<p align="center">
+  <em>Mô hình phần cứng radar tầm ngắn và giao diện TouchGFX khi phát hiện vật cản.</em>
+</p>
 
 ## Tóm tắt
 
